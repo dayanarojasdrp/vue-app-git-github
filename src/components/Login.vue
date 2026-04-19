@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+  <div class="h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-sky-100 to-blue-200">
   <div class="absolute w-72 h-72 bg-white/20 rounded-full blur-3xl top-10 left-10"></div>
  <div class="absolute w-72 h-72 bg-purple-300/20 rounded-full blur-3xl bottom-10 right-10"></div>
     <!-- Card -->
@@ -12,7 +12,16 @@
       <p class="text-sm text-slate-400 text-center mb-6">
         Inicia sesión para continuar
       </p>
-
+<div 
+  v-if="message"
+  class="mb-4 px-4 py-3 rounded-xl text-sm font-medium border animate-fade"
+  :class="{
+    'bg-red-100 text-red-700 border-red-200': messageType === 'error',
+    'bg-yellow-100 text-yellow-700 border-yellow-200': messageType === 'warning'
+  }"
+>
+  {{ message }}
+</div>
       <!-- Form -->
       <form @submit.prevent="login" class="space-y-4">
 
@@ -61,21 +70,55 @@ import { ref } from 'vue'
 
 const username = ref('')
 const password = ref('')
-
+const message = ref('')
+const messageType = ref('') // error | warning
 function login() {
-  // Simulación (luego conectas con backend real)
-  if (username.value && password.value) {
-    const user = {
-      name: username.value,
-      role: 'admin'
-    }
 
-    localStorage.setItem('user', JSON.stringify(user))
-    localStorage.setItem('loginTime', Date.now())
-
-    location.reload()
-  } else {
-    alert('Completa los campos')
+  // ❌ Ambos vacíos
+  if (!username.value && !password.value) {
+    message.value = 'Debes ingresar usuario y contraseña'
+    messageType.value = 'error'
+    return
   }
+
+  // ⚠️ Uno vacío
+  if (!username.value || !password.value) {
+    message.value = 'Completa todos los campos'
+    messageType.value = 'warning'
+    return
+  }
+
+  // 🔍 Buscar usuario real
+  const userFound = usuarios.find(
+    u => u.username === username.value && u.password === password.value
+  )
+
+  // ❌ No existe
+  if (!userFound) {
+    message.value = 'Usuario o contraseña incorrectos'
+    messageType.value = 'error'
+    return
+  }
+
+  // ✅ Login correcto
+  localStorage.setItem('user', JSON.stringify({
+    name: userFound.name,
+    role: userFound.role
+  }))
+
+  localStorage.setItem('loginTime', Date.now())
+
+  location.reload()
 }
+const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
 </script>
+<style scoped>
+@keyframes fade {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade {
+  animation: fade 0.25s ease;
+}
+</style>

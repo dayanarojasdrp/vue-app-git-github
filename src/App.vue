@@ -12,6 +12,7 @@
       <Profesores v-if="active === 'profesores'" />
       <Estudiantes v-if="active === 'estudiantes'" />
       <Documentos v-if="active === 'documentos'" />
+      <Usuarios v-if="active === 'usuarios'" />
     </main>
   </div>
 </template>
@@ -25,6 +26,7 @@ import Profesores from './components/Profesores.vue'
 import Estudiantes from './components/Estudiantes.vue'
 import Documentos from './components/Documentos.vue'
 import Login from './components/Login.vue'
+import Usuarios from './components/Usuarios.vue'
 
 const active = ref('panel')
 const panelKey = ref(0)
