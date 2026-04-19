@@ -1,103 +1,224 @@
 <template>
-  <div class="p-6">
-    <h2 class="text-xl font-semibold mb-6">
-      Designaciones de PPA 
-    </h2>
-
-
-  <button
-  class="px-4 py-2 bg-blue-500 text-white rounded-lg mb-6"
-  @click="openModal"
+  <div
+  v-if="confirmModal.show"
+  class="fixed inset-0 z-[9999] flex items-center justify-center"
 >
-  Designar
-</button>
+  <div
+    class="absolute inset-0 bg-black/30 backdrop-blur-sm"
+    @click="confirmModal.show = false"
+  ></div>
 
+  <div class="relative bg-white rounded-2xl p-6 w-[400px] shadow-xl">
 
+    <p class="text-sm text-slate-700 mb-6">
+      {{ confirmModal.message }}
+    </p>
 
-
-   
-    <div class="bg-white rounded-2xl p-6">
-      <h3 class="font-semibold mb-3">
-        PPA vigentes
-      </h3>
-
-      <p
-        v-if="ppaList.length === 0"
-        class="text-sm text-slate-400"
+    <div class="flex justify-end gap-3">
+      <button
+        @click="confirmModal.show = false"
+        class="px-4 py-2 text-sm rounded-full bg-slate-100"
       >
-        No hay PPA vigentes
-      </p>
-
-      <ul v-else class="space-y-2">
-        <li
-          v-for="(ppa, index) in ppaList"
-          :key="ppa.id"
-          class="border rounded-lg p-3 flex justify-between items-center"
-        >
-          <span>
-            {{ ppa.nombre }} {{ ppa.apellidos }}
-          </span>
-
-          <div class="flex gap-3">
-            <button
-              class="text-sm text-green-600"
-              @click="confirmRatify(ppa)"
-            >
-              Ratificar
-            </button>
-
-            <button
-              class="text-sm text-red-500"
-              @click="confirmRemove(index, ppa)"
-            >
-              Desnombrar
-            </button>
-          </div>
-        </li>
-      </ul>
-    </div>
-  </div>
- 
-<div
-  v-if="showModal"
-  class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
->
-  <div class="bg-white rounded-2xl w-[500px] max-h-[80vh] p-6 overflow-y-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-semibold text-lg">
-        Profesores 
-      </h3>
+        Cancelar
+      </button>
 
       <button
-        class="text-slate-500"
+        @click="handleConfirm"
+        class="px-4 py-2 text-sm rounded-full bg-blue-500 text-white"
+      >
+        Aceptar
+      </button>
+    </div>
+
+  </div>
+</div>
+  <div
+  v-if="toast.show"
+  class="fixed top-6 right-6 z-[9999] px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2"
+  :class="{
+    'bg-white text-green-600 border-green-200': toast.type === 'success',
+    'bg-white text-red-600 border-red-200': toast.type === 'error',
+    'bg-white text-yellow-600 border-yellow-200': toast.type === 'warning'
+  }"
+>
+  <span>
+    {{ toast.type === 'success' ? '✔' : toast.type === 'error' ? '✖' : '⚠' }}
+  </span>
+
+  <span class="text-sm">{{ toast.message }}</span>
+</div>
+  <div class="h-full flex flex-col">
+
+  <!-- 🔵 CONTENIDO -->
+  <div class="flex-1 flex flex-col p-3">
+
+    <!-- CARD PRINCIPAL -->
+    <div class="bg-white rounded-2xl border p-4 shadow-sm flex flex-col flex-1">
+
+      <!-- HEADER -->
+       <h1 class="text-xl font-semibold mb-1">
+      Profesor Principal de Año (PPA)
+    </h1>
+
+      <!-- BOTÓN -->
+      <button
+  class="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-md transition w-fit"
+  @click="openModal"
+>
+  <!-- ICONO PERSONA -->
+  <svg xmlns="http://www.w3.org/2000/svg" 
+       class="w-5 h-5" 
+       fill="none" 
+       viewBox="0 0 24 24" 
+       stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M15 12a4 4 0 10-8 0 4 4 0 008 0zm6 8a6 6 0 00-12 0h12z" />
+  </svg>
+
+  Designar
+</button>
+ 
+ <p class="text-xs text-slate-400">
+          Lista de PPAs
+          </p>
+<div
+  v-if="showModal"
+  class="fixed inset-0 z-50 flex items-center justify-center"
+>
+  <!-- 🔥 OVERLAY -->
+  <div
+    class="absolute inset-0 bg-black/30 backdrop-blur-sm"
+    @click="showModal = false"
+  ></div>
+
+  <!-- 🧊 MODAL -->
+  <div
+    class="relative bg-white w-[520px] rounded-3xl shadow-xl p-6 animate-fade"
+    @click.stop
+  >
+
+    <!-- HEADER -->
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-semibold">Seleccionar profesor</h3>
+
+      <button
         @click="showModal = false"
+        class="text-slate-400 hover:text-red-500 text-xl"
       >
         ✕
       </button>
     </div>
 
-    <ul class="space-y-2">
-      <li
+    <!-- LISTA -->
+    <div class="space-y-3 max-h-[300px] overflow-y-auto">
+
+      <div
         v-for="profesor in profesores"
         :key="profesor.id"
-        class="border rounded-lg p-3 flex justify-between items-center hover:bg-slate-50"
+        class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition rounded-xl px-4 py-3"
       >
-        <span>
-          {{ profesor.nombre }} {{ profesor.apellidos }}
-        </span>
+        <div>
+          <p class="text-sm font-medium">
+            {{ profesor.nombre }} {{ profesor.apellidos }}
+          </p>
+         
+        </div>
 
+        <!-- BOTÓN BONITO -->
         <button
-          class="text-sm text-blue-500"
           @click="confirmAssign(profesor)"
+          class="px-3 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm"
         >
           Asignar
         </button>
-      </li>
-    </ul>
+      </div>
+
+    </div>
+
   </div>
 </div>
 
+      <!-- 🔥 LISTA CON SCROLL (AQUÍ VA EL SCROLL BIEN HECHO) -->
+      <div class="flex-1 overflow-y-auto border rounded-xl p-2">
+
+        <p v-if="ppaList.length === 0" class="text-xs text-slate-400">
+          No hay PPA vigentes
+        </p>
+
+        <ul v-else class="space-y-2">
+
+          <li
+            v-for="ppa in ppaList"
+            :key="ppa.id"
+            class="flex justify-between items-center bg-slate-50 rounded-lg px-2 py-1"
+          >
+            <div>
+              <p class="text-sm font-medium">
+                {{ ppa.nombre }} {{ ppa.apellidos }}
+              </p>
+              <p class="text-xs text-slate-400">
+                PPA activo
+              </p>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+      class="flex items-center gap-1 px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-600"
+      @click="confirmRatify(ppa)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+           class="w-4 h-4">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M5 13l4 4L19 7" />
+      </svg>
+      Ratificar
+    </button>
+              <button
+      class="flex items-center gap-1 px-3 py-1 text-xs rounded-full bg-red-100 text-red-600"
+      @click="confirmRemove(index, ppa)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+           class="w-4 h-4">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M6 7h12M9 7v10m6-10v10M10 11v6m4-6v6" />
+      </svg>
+      Desnombrar
+    </button>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 🔴 ACCIONES FIJAS ABAJO (SIN DOBLE DIV) -->
+   <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
+    <div class="flex justify-end">
+       <button
+      class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600 transition"
+    >
+      <!-- ICONO -->
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+           class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 16v-8m0 0l-3 3m3-3l3 3M4 20h16" />
+      </svg>
+
+      Generar Resolución Decanal
+    </button>
+    </div>
+  </div>
+
+</div>
 </template>
+
+
 
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -122,12 +243,6 @@ async function loadProfesores() {
 
 
 async function confirmAssign(profesor) {
-  const ok = confirm(
-    `¿Desea asignar a ${profesor.nombre} ${profesor.apellidos} como PPA?`
-  )
-
-  if (!ok) return
-
   try {
     await api.post('/ppa/designar', {
       id_profesor: profesor.id,
@@ -135,60 +250,58 @@ async function confirmAssign(profesor) {
       id_a_academico: 1
     })
 
-    alert('Profesor asignado como PPA')
+    showToast('Profesor asignado correctamente')
 
-    showModal.value = false
+    showModal.value = false   // 🔥 CIERRA MODAL
     await loadPPA()
 
   } catch (error) {
-    alert(error.response?.data?.error || 'Error al asignar')
+    showToast('Error al asignar')
   }
 }
 
 
-async function confirmRatify(profesor) {
-  const ok = confirm(
-    `¿Desea ratificar como PPA a ${profesor.nombre} ${profesor.apellidos}?`
+function confirmRemove(index, profesor) {
+  openConfirm(
+    `¿Eliminar a ${profesor.nombre} como PPA?`,
+    async () => {
+      try {
+        await api.post('/ppa/desnombrar', {
+          id_profesor: profesor.id,
+          id_curso: 1,
+          id_a_academico: 1
+        })
+
+        showToast('PPA eliminado correctamente', 'warning')
+        await loadPPA()
+
+      } catch {
+        showToast('Error al eliminar', 'error')
+      }
+    }
   )
-
-  if (!ok) return
-
-  try {
-    await api.post('/ppa/ratificar', {
-      id_profesor: profesor.id,
-      id_curso: 1,
-      id_a_academico: 1
-    })
-
-    alert('PPA ratificado')
-
-  } catch (error) {
-    alert('Error al ratificar')
-  }
 }
 
 
-async function confirmRemove(index, profesor) {
-  const ok = confirm(
-    `¿Está seguro de desnombrar como PPA a ${profesor.nombre} ${profesor.apellidos}?`
+function confirmRatify(profesor) {
+  openConfirm(
+    `¿Desea ratificar a ${profesor.nombre}?`,
+    async () => {
+      try {
+        await api.post('/ppa/ratificar', {
+          id_profesor: profesor.id,
+          id_curso: 1,
+          id_a_academico: 1
+        })
+
+        showToast('PPA ratificado correctamente', 'success')
+        await loadPPA()
+
+      } catch {
+        showToast('Error al ratificar', 'error')
+      }
+    }
   )
-
-  if (!ok) return
-
-  try {
-    await api.post('/ppa/desnombrar', {
-      id_profesor: profesor.id,
-      id_curso: 1,
-      id_a_academico: 1
-    })
-
-    alert('PPA eliminado')
-
-    await loadPPA()
-
-  } catch (error) {
-    alert(error.response?.data?.error || 'Error')
-  }
 }
 
 
@@ -210,7 +323,40 @@ async function openModal() {
   await loadProfesores()
   showModal.value = true
 }
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'success'
+})
 
+function showToast(msg, type = 'success') {
+  toast.value.message = msg
+  toast.value.type = type
+  toast.value.show = true
+
+  setTimeout(() => {
+    toast.value.show = false
+  }, 2500)
+}
+const confirmModal = ref({
+  show: false,
+  message: '',
+  action: null
+})
+function openConfirm(message, action) {
+  confirmModal.value = {
+    show: true,
+    message,
+    action
+  }
+}
+async function handleConfirm() {
+  if (confirmModal.value.action) {
+    await confirmModal.value.action()
+  }
+
+  confirmModal.value.show = false
+}
 </script>
 
 <style scoped>

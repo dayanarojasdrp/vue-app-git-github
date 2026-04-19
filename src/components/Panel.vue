@@ -1,17 +1,6 @@
 <template>
  
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-slate-800">
-      PPA y AA
-    </h2>
-
-    <button
-      class="report-btn"
-      @click="showConfigModal = true"
-    >
-      Exportar
-    </button>
-  </div>
+  
 
 
   <div class="panel-container grid grid-cols-2 gap-6">
@@ -49,7 +38,7 @@
     </section>
 
     <!-- AA -->
-    <section class="role-card">
+    <section class="bg-white rounded-2xl p-6">
       <h3 class="font-semibold mb-4">
         Alumno Ayudante (AA)
       </h3>

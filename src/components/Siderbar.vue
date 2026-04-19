@@ -51,7 +51,7 @@
 <div class="px-3 pb-2">
  <button
   class="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition text-sm"
-  @click="showConfig = true"
+  @click="$emit('openConfig')"
 >
   <Cog6ToothIcon class="w-5 h-5" />
   Configuración
@@ -118,156 +118,7 @@
 
   </div>
 </div>
-<div v-if="showConfig" class="fixed inset-0 z-50 flex items-center justify-center">
 
-  <!-- Fondo oscuro -->
-  <div 
-    class="absolute inset-0 bg-black/40 backdrop-blur-sm"
-    @click="showConfig = false"
-  ></div>
-
-  <!-- Modal -->
-  <div 
-  class="relative bg-white w-[420px] rounded-2xl shadow-2xl p-5 animate-fade"
-  @click.stop
->
-
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Configuración del sistema</h2>
-
-      <button @click="showConfig = false" class="text-slate-400 hover:text-red-500">
-        ✕
-      </button>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-2 mb-6">
-
-      <button 
-        @click="tab = 'usuarios'"
-        :class="tabClass('usuarios')"
-      >
-        Usuarios
-      </button>
-
-      <button 
-        @click="tab = 'actividad'"
-        :class="tabClass('actividad')"
-      >
-        Actividad
-      </button>
-
-      <button 
-        @click="tab = 'roles'"
-        :class="tabClass('roles')"
-      >
-        Roles
-      </button>
-
-    </div>
-
-    <!-- CONTENIDO -->
-
-    <!-- 👤 USUARIOS -->
-    <div v-if="tab === 'usuarios'" class="space-y-4">
-
-  <!-- SUB OPCIONES -->
-  <div class="flex gap-2 mb-2">
-
-    <button @click="userTab = 'crear'" :class="subTab(userTab, 'crear')">
-      Dar acceso
-    </button>
-
-    <button @click="userTab = 'editar'" :class="subTab(userTab, 'editar')">
-      Modificar
-    </button>
-
-    <button @click="userTab = 'eliminar'" :class="subTab(userTab, 'eliminar')">
-      Eliminar
-    </button>
-
-  </div>
-
-  <!-- 🟢 CREAR -->
-  <div v-if="userTab === 'crear'" class="space-y-3">
-
-    <input v-model="newUser" placeholder="Nombre usuario"
-      class="w-full px-3 py-2 border rounded-xl" />
-
-    <select v-model="newRole" class="w-full px-3 py-2 border rounded-xl">
-      <option disabled value="">Rol</option>
-      <option>admin</option>
-      <option>jefe de departamento</option>
-      <option>invitado</option>
-    </select>
-
-    <button @click="addUser"
-      class="w-full bg-blue-500 text-white py-2 rounded-xl">
-      Dar acceso
-    </button>
-
-  </div>
-
-  <!-- 🟡 EDITAR -->
-  <div v-if="userTab === 'editar'" class="space-y-3">
-
-    <select v-model="selectedUser" class="w-full px-3 py-2 border rounded-xl">
-      <option disabled value="">Selecciona usuario</option>
-      <option v-for="u in usuarios" :key="u.username" :value="u">
-        {{ u.username }}
-      </option>
-    </select>
-
-    <select v-model="newRole" class="w-full px-3 py-2 border rounded-xl">
-      <option disabled value="">Nuevo rol</option>
-      <option>admin</option>
-      <option>jefe de departamento</option>
-      <option>invitado</option>
-    </select>
-
-    <button @click="updateUser"
-      class="w-full bg-yellow-500 text-white py-2 rounded-xl">
-      Actualizar
-    </button>
-
-  </div>
-
-  <!-- 🔴 ELIMINAR -->
-  <div v-if="userTab === 'eliminar'" class="space-y-3">
-
-    <select v-model="selectedUser" class="w-full px-3 py-2 border rounded-xl">
-      <option disabled value="">Selecciona usuario</option>
-      <option v-for="u in usuarios" :key="u.username" :value="u">
-        {{ u.username }}
-      </option>
-    </select>
-
-    <button @click="deleteUser(selectedUser)"
-      class="w-full bg-red-500 text-white py-2 rounded-xl">
-      Eliminar usuario
-    </button>
-
-  </div>
-
-</div>
-
-    <!-- 📊 ACTIVIDAD -->
-    <div v-if="tab === 'actividad'">
-      <p class="text-sm text-slate-500">
-        Aquí verás acciones realizadas por usuarios (luego lo conectas backend)
-      </p>
-    </div>
-
-    <!-- ⚙️ ROLES -->
-    <div v-if="tab === 'roles'">
-      <p class="text-sm text-slate-500">
-        Gestión de permisos (puedes expandir luego)
-      </p>
-    </div>
-
-  </div>
-</div>
   </aside>
 </template>
 
@@ -326,13 +177,14 @@
   defineProps({
   active: String
 })
+defineEmits(['change', 'openConfig'])
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
 const menuRef = ref(null)
 const user = ref(null)
 const showMenu = ref(false)
-const showConfig = ref(false)
+
 const tab = ref('usuarios')
 
 const newUser = ref('')

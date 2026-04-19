@@ -72,6 +72,29 @@ const username = ref('')
 const password = ref('')
 const message = ref('')
 const messageType = ref('') // error | warning
+
+// 🔥 usuarios TEMPORALES (frontend)
+const usuarios = [
+  {
+    username: 'dayarojas',
+    password: '123',
+    name: 'Dayana Rojas',
+    role: 'admin'
+  },
+  {
+    username: 'raul',
+    password: '123',
+    name: 'Raul',
+    role: 'jefededepartamento'
+  },
+  {
+    username: 'invitado',
+    password: '123',
+    name: 'Invitado',
+    role: 'invitado'
+  }
+]
+
 function login() {
 
   // ❌ Ambos vacíos
@@ -88,7 +111,7 @@ function login() {
     return
   }
 
-  // 🔍 Buscar usuario real
+  // 🔍 Buscar usuario
   const userFound = usuarios.find(
     u => u.username === username.value && u.password === password.value
   )
@@ -100,9 +123,10 @@ function login() {
     return
   }
 
-  // ✅ Login correcto
+  // ✅ Login correcto (IMPORTANTE: username incluido)
   localStorage.setItem('user', JSON.stringify({
     name: userFound.name,
+    username: userFound.username, // 🔥 CLAVE
     role: userFound.role
   }))
 
@@ -110,12 +134,6 @@ function login() {
 
   location.reload()
 }
-const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
-localStorage.setItem('user', JSON.stringify({
-  name: username.value,
-  username: username.value,
-  role: 'admin' // o el que corresponda
-}))
 </script>
 <style scoped>
 @keyframes fade {
