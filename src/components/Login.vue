@@ -111,6 +111,11 @@ function login() {
   location.reload()
 }
 const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
+localStorage.setItem('user', JSON.stringify({
+  name: username.value,
+  username: username.value,
+  role: 'admin' // o el que corresponda
+}))
 </script>
 <style scoped>
 @keyframes fade {
