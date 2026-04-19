@@ -121,60 +121,85 @@ async function loadProfesores() {
 }
 
 
-function confirmAssign(profesor) {
+async function confirmAssign(profesor) {
   const ok = confirm(
     `¿Desea asignar a ${profesor.nombre} ${profesor.apellidos} como PPA?`
   )
 
   if (!ok) return
 
+  try {
+    await api.post('/ppa/designar', {
+      id_profesor: profesor.id,
+      id_curso: 1,
+      id_a_academico: 1
+    })
 
-  const exists = ppaList.value.some(p => p.id === profesor.id)
-  if (exists) return
+    alert('Profesor asignado como PPA')
 
-  ppaList.value.push(profesor)
-  syncPPA()
+    showModal.value = false
+    await loadPPA()
 
- alert('Profesor asignado como PPA')
-showModal.value = false
-
+  } catch (error) {
+    alert(error.response?.data?.error || 'Error al asignar')
+  }
 }
 
 
-function confirmRatify(profesor) {
+async function confirmRatify(profesor) {
   const ok = confirm(
     `¿Desea ratificar como PPA a ${profesor.nombre} ${profesor.apellidos}?`
   )
 
   if (!ok) return
 
-  alert('PPA ratificado')
+  try {
+    await api.post('/ppa/ratificar', {
+      id_profesor: profesor.id,
+      id_curso: 1,
+      id_a_academico: 1
+    })
+
+    alert('PPA ratificado')
+
+  } catch (error) {
+    alert('Error al ratificar')
+  }
 }
 
 
-function confirmRemove(index, profesor) {
+async function confirmRemove(index, profesor) {
   const ok = confirm(
     `¿Está seguro de desnombrar como PPA a ${profesor.nombre} ${profesor.apellidos}?`
   )
 
   if (!ok) return
 
-  ppaList.value.splice(index, 1)
-  syncPPA()
+  try {
+    await api.post('/ppa/desnombrar', {
+      id_profesor: profesor.id,
+      id_curso: 1,
+      id_a_academico: 1
+    })
 
-  alert(
-    `Se ha desnombrado como PPA al profesor ${profesor.nombre} ${profesor.apellidos}`
-  )
+    alert('PPA eliminado')
+
+    await loadPPA()
+
+  } catch (error) {
+    alert(error.response?.data?.error || 'Error')
+  }
 }
 
-function syncPPA() {
-  localStorage.setItem('ppaList', JSON.stringify(ppaList.value))
-}
 
-function loadPPA() {
-  const stored = localStorage.getItem('ppaList')
-  if (stored) {
-    ppaList.value = JSON.parse(stored)
+
+async function loadPPA() {
+  try {
+    const response = await api.get('/ppa')
+    ppaList.value = response.data
+  } catch (error) {
+    console.error(error)
+    alert('Error cargando PPA')
   }
 }
 
