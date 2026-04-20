@@ -77,66 +77,14 @@
 
   Designar
 </button>
- 
+ <DesignarModal
+  v-model="showModal"
+  :profesores="profesores"
+/>
  <p class="text-xs text-slate-400">
           Lista de PPAs
           </p>
-<div
-  v-if="showModal"
-  class="fixed inset-0 z-50 flex items-center justify-center"
->
-  <!-- 🔥 OVERLAY -->
-  <div
-    class="absolute inset-0 bg-black/30 backdrop-blur-sm"
-    @click="showModal = false"
-  ></div>
 
-  <!-- 🧊 MODAL -->
-  <div
-    class="relative bg-white w-[520px] rounded-3xl shadow-xl p-6 animate-fade"
-    @click.stop
-  >
-
-    <!-- HEADER -->
-    <div class="flex justify-between items-center mb-5">
-      <h3 class="text-lg font-semibold">Seleccionar profesor</h3>
-
-      <button
-        @click="showModal = false"
-        class="text-slate-400 hover:text-red-500 text-xl"
-      >
-        ✕
-      </button>
-    </div>
-
-    <!-- LISTA -->
-    <div class="space-y-3 max-h-[300px] overflow-y-auto">
-
-      <div
-        v-for="profesor in profesores"
-        :key="profesor.id"
-        class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition rounded-xl px-4 py-3"
-      >
-        <div>
-          <p class="text-sm font-medium">
-            {{ profesor.nombre }} {{ profesor.apellidos }}
-          </p>
-         
-        </div>
-
-        <!-- BOTÓN BONITO -->
-        <button
-          @click="confirmAssign(profesor)"
-          class="px-3 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm"
-        >
-          Asignar
-        </button>
-      </div>
-
-    </div>
-
-  </div>
-</div>
 
       <!-- 🔥 LISTA CON SCROLL (AQUÍ VA EL SCROLL BIEN HECHO) -->
       <div class="flex-1 overflow-y-auto border rounded-xl p-2">
@@ -176,7 +124,7 @@
     </button>
               <button
       class="flex items-center gap-1 px-3 py-1 text-xs rounded-full bg-red-100 text-red-600"
-      @click="confirmRemove(index, ppa)"
+      @click="confirmRemove(ppa)"
     >
       <svg xmlns="http://www.w3.org/2000/svg" 
            fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
@@ -223,7 +171,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api/axios'
-
+import { cursoSeleccionado, anioSeleccionado } from '../store/context'
+import DesignarModal from './DesignarModal.vue'
 const profesores = ref([])
 const ppaList = ref([])
 const showProfesores = ref(false)
@@ -242,63 +191,48 @@ async function loadProfesores() {
 }
 
 
-async function confirmAssign(profesor) {
-  try {
-    await api.post('/ppa/designar', {
-      id_profesor: profesor.id,
-      id_curso: 1,
-      id_a_academico: 1
-    })
-
-    showToast('Profesor asignado correctamente')
-
-    showModal.value = false   // 🔥 CIERRA MODAL
-    await loadPPA()
-
-  } catch (error) {
-    showToast('Error al asignar')
-  }
-}
 
 
-function confirmRemove(index, profesor) {
-  openConfirm(
-    `¿Eliminar a ${profesor.nombre} como PPA?`,
-    async () => {
-      try {
-        await api.post('/ppa/desnombrar', {
-          id_profesor: profesor.id,
-          id_curso: 1,
-          id_a_academico: 1
-        })
-
-        showToast('PPA eliminado correctamente', 'warning')
-        await loadPPA()
-
-      } catch {
-        showToast('Error al eliminar', 'error')
-      }
-    }
-  )
-}
-
-
-function confirmRatify(profesor) {
+async function confirmRatify(profesor) {
   openConfirm(
     `¿Desea ratificar a ${profesor.nombre}?`,
     async () => {
       try {
         await api.post('/ppa/ratificar', {
           id_profesor: profesor.id,
-          id_curso: 1,
-          id_a_academico: 1
+          id_curso: cursoSeleccionado.value,
+          id_a_academico: anioSeleccionado.value
         })
 
         showToast('PPA ratificado correctamente', 'success')
         await loadPPA()
 
-      } catch {
+      } catch (error) {
+        console.log(error.response)
         showToast('Error al ratificar', 'error')
+      }
+    }
+  )
+}
+
+
+async function confirmRemove(profesor) {
+  openConfirm(
+    `¿Eliminar a ${profesor.nombre} como PPA?`,
+    async () => {
+      try {
+        await api.post('/ppa/desnombrar', {
+          id_profesor: profesor.id,
+          id_curso: cursoSeleccionado.value,
+          id_a_academico: anioSeleccionado.value
+        })
+
+        showToast('PPA eliminado correctamente', 'warning')
+        await loadPPA()
+
+      } catch (error) {
+        console.log(error.response)
+        showToast('Error al eliminar', 'error')
       }
     }
   )
@@ -356,6 +290,10 @@ async function handleConfirm() {
   }
 
   confirmModal.value.show = false
+}
+function asignar(profesor) {
+  profesorSeleccionado.value = profesor
+  showModal.value = true
 }
 </script>
 
