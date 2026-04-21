@@ -1,4 +1,5 @@
 <template>
+
   <div
   v-if="confirmModal.show"
   class="fixed inset-0 z-[9999] flex items-center justify-center"
@@ -217,10 +218,7 @@
 </div>
 
 </div>
-<ExportModal
-  :show="showExportModal"
-  @close="showExportModal = false"
-/>
+
 </template>
 
 
@@ -231,6 +229,8 @@ import api from '../api/axios'
 import { cursoSeleccionado, anioSeleccionado } from '../store/context'
 import DesignarModal from './DesignarModal.vue'
 import { computed } from 'vue'
+import HeaderBar from './HeaderBar.vue'
+import ExportModal from './ExportModal.vue'
 const showExportModal = ref(false)
 
 
@@ -394,8 +394,10 @@ function toggleSearchPPA() {
   }
 }
 function exportarProfesores() {
+  console.log('FUNCION PADRE EJECUTADA')
   showExportModal.value = true
 }
+
 </script>
 
 <style scoped>

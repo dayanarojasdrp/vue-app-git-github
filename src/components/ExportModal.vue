@@ -54,17 +54,19 @@ const emit = defineEmits(['close'])
 
 async function exportar(tipo) {
   try {
-    const res = await api.get(`/exportar-ppa?tipo=${tipo}`, {
+    const url = tipo === 'pdf'
+      ? '/export/ppa/pdf'
+      : '/export/ppa/word'
+
+    const res = await api.get(url, {
       responseType: 'blob'
     })
 
     const blob = new Blob([res.data])
-    const url = window.URL.createObjectURL(blob)
-
-    const a = document.createElement('a')
-    a.href = url
-    a.download = tipo === 'pdf' ? 'ppa.pdf' : 'ppa.docx'
-    a.click()
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = tipo === 'pdf' ? 'ppa.pdf' : 'ppa.docx'
+    link.click()
 
     emit('close')
 

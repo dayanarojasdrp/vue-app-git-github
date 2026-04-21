@@ -14,16 +14,22 @@
     <div class="flex-1 flex flex-col">
 
       <!-- HEADER -->
-      <HeaderBar title="PPA y AA" />
+      <HeaderBar @exportar="handleExport" />
 
-      <!-- CONTENIDO -->
-      <main class="flex-1 bg-slate-100 p-6 overflow-y-auto">
-        <Panel v-if="active === 'panel'" :key="panelKey" />
-        <Profesores v-if="active === 'profesores'" />
-        <Estudiantes v-if="active === 'estudiantes'" />
-        <Documentos v-if="active === 'documentos'" />
-        <Usuarios v-if="active === 'usuarios'" />
-      </main>
+
+
+<ExportModal
+  :show="showExportModal"
+  @close="showExportModal = false"
+/>
+
+<main class="flex-1 bg-slate-100 p-6 overflow-y-auto">
+  <Panel v-if="active === 'panel'" :key="panelKey" />
+  <Profesores v-if="active === 'profesores'" />
+  <Estudiantes v-if="active === 'estudiantes'" />
+  <Documentos v-if="active === 'documentos'" />
+  <Usuarios v-if="active === 'usuarios'" />
+</main>
 
     </div>
 
@@ -46,6 +52,12 @@ import Login from './components/Login.vue'
 import Usuarios from './components/Usuarios.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import ConfigModal from './components/ConfigModal.vue'
+import ExportModal from './components/ExportModal.vue'
+
+
+
+const showExportModal = ref(false)
+
 
 const showConfig = ref(false)
 const active = ref('panel')
@@ -78,5 +90,14 @@ onMounted(() => {
 
 function handleLogin() {
   isLogged.value = true
+}
+function handleExport() {
+  if (active.value === 'profesores') {
+    showExportModal.value = true
+  }
+
+  if (active.value === 'estudiantes') {
+    console.log('Exportar estudiantes')
+  }
 }
 </script>
