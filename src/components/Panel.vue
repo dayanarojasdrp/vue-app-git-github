@@ -18,20 +18,42 @@
 
         <ul v-else class="space-y-2">
           <li
-  v-for="ppa in ppaList"
+ v-for="ppa in ppaUnicos"
   :key="ppa.id"
-  class="flex justify-between items-center border rounded-lg p-3"
+  class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-xl px-3 py-2"
 >
-  <span>
-    {{ ppa.nombre }} {{ ppa.apellidos }}
-  </span>
+  <!-- IZQUIERDA -->
+  <div class="flex items-center gap-3">
 
-  <button
-    class="text-sm text-blue-500"
-    @click="explorarPPA(ppa)"
-  >
-    Explorar
-  </button>
+    <!-- 👤 ICONO -->
+    <div class="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M5.121 17.804A9 9 0 1118.879 17.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </div>
+
+    <!-- TEXTO -->
+    <div>
+      <p class="text-sm font-medium leading-tight">
+        {{ ppa.nombre }} {{ ppa.apellidos }}
+      </p>
+
+      <!-- 🔥 BURBUJAS PEQUEÑAS -->
+      <div class="flex gap-1 mt-1 flex-wrap text-[10px]">
+        
+        <span class="px-2 py-[2px] bg-slate-200 text-slate-600 rounded-full">
+          {{ ppa.catDocente }}
+        </span>
+
+        <span class="px-2 py-[2px] bg-purple-100 text-purple-600 rounded-full">
+          {{ ppa.catCientifica }}
+        </span>
+
+      </div>
+    </div>
+
+  </div>
 </li>
         </ul>
       </div>
@@ -123,56 +145,7 @@
   </div>
 
 
-  <!-- 🔍 MODAL EXPLORAR -->
-  <div
-    v-if="showExploreModal"
-    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-  >
-    <div class="bg-white rounded-2xl w-[400px] p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-semibold text-lg">
-          Profesor Principal de Año
-        </h3>
 
-        <button
-          class="text-slate-500"
-          @click="showExploreModal = false"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div class="mb-6">
-        <p class="text-sm text-slate-500 mb-1">Profesor</p>
-        <p class="font-medium">
-          {{ selectedPPA?.nombre }} {{ selectedPPA?.apellidos }}
-        </p>
-
-        <div class="mb-4">
-          <p class="text-sm text-slate-500">Categoría Docente</p>
-          <p class="font-medium">
-            {{ catDocenteName }}
-          </p>
-        </div>
-
-        <div class="mb-4">
-          <p class="text-sm text-slate-500">Categoría Científica</p>
-          <p class="font-medium">
-            {{ catCientificaName }}
-          </p>
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg"
-          @click="showExploreModal = false"
-        >
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
 
 
   <!-- ✅ MODAL ÉXITO -->
@@ -227,7 +200,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-
+import { computed } from 'vue'
 const ppaList = ref([])
 const aaList = ref([])
 
@@ -245,11 +218,9 @@ const resolutionType = ref('ppa')
 const showConfigModal = ref(false)
 const showSuccessModal = ref(false)
 
-const selectedPPA = ref(null)
-const showExploreModal = ref(false)
 
-const catDocenteName = ref('')
-const catCientificaName = ref('')
+
+
 
 function confirmExport() {
   console.log('Formato:', format.value)
@@ -259,14 +230,7 @@ function confirmExport() {
   showSuccessModal.value = true
 }
 
-async function explorarPPA(ppa) {
-  selectedPPA.value = ppa
 
-  catDocenteName.value = ppa.catDocente
-  catCientificaName.value = ppa.catCientifica
-
-  showExploreModal.value = true
-}
 async function loadPPA() {
   try {
     const response = await axios.get('http://localhost:8000/api/ppa')
@@ -275,4 +239,17 @@ async function loadPPA() {
     console.error(error)
   }
 }
+
+
+const ppaUnicos = computed(() => {
+  const mapa = new Map()
+
+  ppaList.value.forEach(ppa => {
+    if (!mapa.has(ppa.id)) {
+      mapa.set(ppa.id, ppa)
+    }
+  })
+
+  return Array.from(mapa.values())
+})
 </script>

@@ -3,13 +3,26 @@
 
     <div class="bg-white w-[420px] rounded-2xl p-6 shadow-2xl border border-slate-200">
 
-      <div class="flex items-center gap-3 mb-6">
-  <div class="bg-blue-100 p-2 rounded-xl">
-    <AcademicCapIcon class="w-6 h-6 text-blue-600" />
+      <div class="flex items-center justify-between mb-6">
+
+  <div class="flex items-center gap-3">
+    <div class="bg-blue-100 p-2 rounded-xl">
+      <AcademicCapIcon class="w-6 h-6 text-blue-600" />
+    </div>
+
+    <h2 class="text-xl font-semibold text-slate-700">
+      Asignar PPA
+    </h2>
   </div>
-  <h2 class="text-xl font-semibold text-slate-700">
-    Asignar PPA
-  </h2>
+
+  <!-- ❌ BOTÓN CERRAR -->
+  <button
+    @click="$emit('update:modelValue', false)"
+    class="text-slate-400 hover:text-red-500 transition"
+  >
+    <XMarkIcon class="w-6 h-6" />
+  </button>
+
 </div>
 
       <!-- STEP 1: PROFESOR -->
@@ -24,27 +37,27 @@
   <div class="relative flex items-center">
 
     <!-- INPUT -->
-    <input
-      v-model="search"
-      type="text"
-      placeholder="Buscar..."
-      class="transition-all duration-300 ease-in-out
-             bg-slate-100 border border-slate-200
-             text-sm rounded-full
-             focus:outline-none focus:ring-2 focus:ring-blue-400
-             px-3 py-1.5
-             w-0 opacity-0
-             peer-focus:w-48 peer-focus:opacity-100
-             focus:w-48 focus:opacity-100"
-    />
+   <input
+  ref="searchInput"
+  v-model="search"
+  type="text"
+  placeholder="Buscar..."
+  class="transition-all duration-300 ease-in-out
+         bg-slate-100 border border-slate-200
+         text-sm rounded-full
+         focus:outline-none focus:ring-2 focus:ring-blue-400
+         px-3 py-1.5
+         "
+  :class="searchOpen ? 'w-48 opacity-100' : 'w-0 opacity-0 px-0'"
+/>
 
     <!-- ICONO -->
     <button
-      class="absolute right-0 p-1.5 text-slate-500 hover:text-blue-500"
-      @click="$refs.searchInput?.focus()"
-    >
-      <MagnifyingGlassIcon class="w-5 h-5" />
-    </button>
+  class="absolute right-0 p-1.5 text-slate-500 hover:text-blue-500"
+  @click="toggleSearch"
+>
+  <MagnifyingGlassIcon class="w-5 h-5" />
+</button>
 
   </div>
 
@@ -52,6 +65,7 @@
 <div class="max-h-[300px] overflow-y-auto scroll-custom">
         <div
   v-for="prof in profesoresFiltrados"
+  
   :key="prof.id"
   class="flex items-center justify-between bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all rounded-xl px-4 py-3 mb-2"
 >
@@ -72,6 +86,9 @@
     Asignar
   </button>
 </div>
+<div v-if="profesoresFiltrados.length === 0" class="text-center text-sm text-slate-400 py-4">
+  No se encontraron profesores
+</div>
 </div>
 
       </div>
@@ -91,6 +108,9 @@
   <span class="text-sm text-slate-700 font-medium">
     {{ dep.nombre }}
   </span>
+</div>
+<div v-if="departamentos.length === 0" class="text-sm text-slate-400">
+  No hay departamentos disponibles
 </div>
       </div>
 
@@ -131,15 +151,35 @@
       </div>
 
       <!-- CANCEL -->
-      <button
-  @click="$emit('update:modelValue', false)"
-  class="mt-6 w-full py-2 rounded-xl border border-red-300 text-red-500 hover:bg-red-50 transition"
->
-  Cancelar
-</button>
+      <div class="mt-6 flex items-center justify-between">
+
+  <!-- ⬅️ ATRÁS -->
+  <button
+    @click="volverPaso"
+    class="flex items-center gap-2 text-slate-500 hover:text-blue-500 transition"
+  >
+    <ArrowLeftIcon class="w-5 h-5" />
+    <span class="text-sm"></span>
+  </button>
+
+  <!-- ❌ CANCELAR -->
+  <button
+    @click="$emit('update:modelValue', false)"
+    class="text-sm text-red-500 hover:text-red-600 transition"
+  >
+    Cancelar
+  </button>
+
+</div>
 
     </div>
   </div>
+  <ConfirmModal
+  :show="mostrarConfirmacion"
+  :mensaje="`${profesorSeleccionado?.nombre} ya es PPA.\n¿Deseas asignarlo nuevamente?`"
+  @aceptar="aceptarConfirmacion"
+  @cancelar="cancelarConfirmacion"
+/>
 </template>
 
 <script setup>
@@ -153,12 +193,20 @@ import {
 } from '@heroicons/vue/24/outline'
 import {  computed } from 'vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+import { XMarkIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { successAlert, errorAlert } from '../utiles/alerts'
+import { confirmAlert } from '../utiles/alerts'
+import ConfirmModal from './ConfirmModal.vue'
+import { nextTick } from 'vue'
+const searchInput = ref(null)
 const search = ref('')
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'ppa-creado'])
 
 const props = defineProps({
   modelValue: Boolean,
-  profesores: Array // 🔥 ahora recibes la lista completa
+  profesores: Array, // 🔥 ahora recibes la lista completa
+  ppaList: Array 
 })
 
 const step = ref(1)
@@ -167,7 +215,7 @@ const profesorSeleccionado = ref(null)
 const departamentos = ref([])
 const carreras = ref([])
 const anios = ref([])
-
+const searchOpen = ref(false)
 const departamentoSeleccionado = ref(null)
 const carreraSeleccionada = ref(null)
 const anioSeleccionado = ref(null)
@@ -184,6 +232,8 @@ const profesoresFiltrados = computed(() => {
     return nombreCompleto.includes(busqueda)
   })
 })
+const mostrarConfirmacion = ref(false)
+const resolverConfirmacion = ref(null)
 
 // 🔥 CUANDO ABRE
 watch(() => props.modelValue, async (val) => {
@@ -217,8 +267,9 @@ async function cargarDepartamentos() {
 
     departamentos.value = res.data
   } catch (error) {
-    console.error('Error cargando departamentos:', error)
-  }
+  console.error(error)
+  errorAlert('No se pudieron cargar los departamentos')
+}
 }
 
 function selectDepartamento(dep) {
@@ -239,8 +290,9 @@ async function cargarCarreras(idDepartamento) {
 
     carreras.value = res.data
   } catch (error) {
-    console.error('Error cargando carreras:', error)
-  }
+  console.error(error)
+  errorAlert('No se pudieron cargar las carreras')
+}
 }
 
 function selectCarrera(c) {
@@ -261,8 +313,9 @@ async function cargarAnios(idProgForm) {
 
     anios.value = res.data
   } catch (error) {
-    console.error('Error cargando años:', error)
-  }
+  console.error(error)
+  errorAlert('No se pudieron cargar los años académicos')
+}
 }
 
 async function selectAnio(a) {
@@ -278,27 +331,54 @@ async function selectAnio(a) {
     await crearPPA(cursoId)
 
   } catch (error) {
-    console.error('Error obteniendo curso:', error)
-    alert('Error obteniendo curso')
+    console.error('Error obteniendo año:', error)
+    errorAlert(
+  error.response?.data?.error || 'Error al obtener año'
+)
   }
 }
 
 
 async function crearPPA(idCurso) {
   try {
+   if (
+  !profesorSeleccionado.value?.id ||
+  !anioSeleccionado.value?.id ||
+  !idCurso
+) {
+  errorAlert('Faltan datos para completar la asignación')
+  return
+}
+   const yaEsPPA = props.ppaList?.some(
+  p => p.id === profesorSeleccionado.value.id
+)
+
+if (yaEsPPA) {
+  const confirmar = await confirmarBonito(
+    `${profesorSeleccionado.value.nombre} ya es PPA.\n\n¿Deseas asignarlo nuevamente?`
+  )
+
+  if (!confirmar) return
+}
     await api.post('/ppa/designar', {
       id_profesor: profesorSeleccionado.value.id,
       id_a_academico: anioSeleccionado.value.id,
       id_curso: idCurso
     })
 
-    alert(`Se asignó correctamente a ${profesorSeleccionado.value.nombre} como PPA de ${carreraSeleccionada.value.nombre} (${anioSeleccionado.value.identificador})`)
-
+   successAlert(
+  `Se asignó correctamente a ${profesorSeleccionado.value.nombre} 
+  como PPA de ${carreraSeleccionada.value.nombre} 
+  (${anioSeleccionado.value.identificador})`
+)
+    emit('ppa-creado')
     emit('update:modelValue', false)
 
   } catch (error) {
     console.error(error)
-    alert(error.response?.data?.error || 'Error al asignar')
+   errorAlert(
+  error.response?.data?.error || 'Error al asignar'
+)
   }
 }
 function normalizarTexto(texto) {
@@ -306,6 +386,37 @@ function normalizarTexto(texto) {
     .toLowerCase()
     .normalize('NFD') // separa letras de tildes
     .replace(/[\u0300-\u036f]/g, '') // elimina tildes
+}
+async function toggleSearch() {
+  searchOpen.value = !searchOpen.value
+
+  if (searchOpen.value) {
+    await nextTick() // 🔥 espera a que el input exista
+    searchInput.value?.focus()
+  } else {
+    search.value = ''
+  }
+}
+function volverPaso() {
+  if (step.value > 1) {
+    step.value--
+  }
+}
+function confirmarBonito(mensaje) {
+  mostrarConfirmacion.value = true
+
+  return new Promise((resolve) => {
+    resolverConfirmacion.value = resolve
+  })
+}
+function aceptarConfirmacion() {
+  mostrarConfirmacion.value = false
+  resolverConfirmacion.value(true)
+}
+
+function cancelarConfirmacion() {
+  mostrarConfirmacion.value = false
+  resolverConfirmacion.value(false)
 }
 </script>
 

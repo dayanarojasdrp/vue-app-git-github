@@ -21,8 +21,9 @@
 
       <!-- BOTÓN EXPORTAR DEFAULT -->
       <button
-        class="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl shadow-md hover:scale-[1.03] transition"
-      >
+  @click="emit('exportar')"
+  class="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl shadow-md hover:scale-[1.03] transition"
+>
         <svg xmlns="http://www.w3.org/2000/svg"
              class="w-5 h-5"
              fill="none"
@@ -43,6 +44,8 @@
 </template>
 
 <script setup>
+
+const emit = defineEmits(['exportar'])
 defineProps({
   title: String
 })

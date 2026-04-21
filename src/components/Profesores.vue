@@ -56,9 +56,48 @@
     <div class="bg-white rounded-2xl border p-4 shadow-sm flex flex-col flex-1">
 
       <!-- HEADER -->
-       <h1 class="text-xl font-semibold mb-1">
-      Profesor Principal de Año (PPA)
-    </h1>
+       <div class="flex items-center justify-between mb-2">
+
+  <h1 class="text-xl font-semibold">
+    Profesor Principal de Año (PPA)
+  </h1>
+
+  <!-- 🔍 BUSCADOR -->
+  <div class="relative flex items-center">
+
+  <!-- INPUT (OCULTO / ANIMADO) -->
+  <input
+    v-model="searchPPA"
+    type="text"
+    placeholder="Buscar..."
+    class="absolute right-8 transition-all duration-300 ease-in-out
+           bg-slate-100 border border-slate-200
+           text-sm rounded-full
+           focus:outline-none focus:ring-2 focus:ring-blue-400
+           py-1.5"
+    :class="searchOpenPPA 
+      ? 'w-48 px-3 opacity-100' 
+      : 'w-0 px-0 opacity-0'"
+  />
+
+  <!-- LUPA -->
+  <button
+    @click="toggleSearchPPA"
+    class="p-1.5 text-slate-500 hover:text-blue-500 transition"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" 
+         class="w-5 h-5" 
+         fill="none" 
+         viewBox="0 0 24 24" 
+         stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M21 21l-4.35-4.35M16 10a6 6 0 11-12 0 6 6 0 0112 0z" />
+    </svg>
+  </button>
+
+</div>
+
+</div>
 
       <!-- BOTÓN -->
       <button
@@ -77,9 +116,11 @@
 
   Designar
 </button>
- <DesignarModal
+<DesignarModal
   v-model="showModal"
   :profesores="profesores"
+  @ppa-creado="loadPPA"
+  :ppa-list="ppaList"
 />
  <p class="text-xs text-slate-400">
           Lista de PPAs
@@ -96,7 +137,7 @@
         <ul v-else class="space-y-2">
 
           <li
-            v-for="ppa in ppaList"
+            v-for="ppa in ppaFiltrados"
             :key="ppa.id"
             class="flex justify-between items-center bg-slate-50 rounded-lg px-2 py-1"
           >
@@ -104,9 +145,22 @@
               <p class="text-sm font-medium">
                 {{ ppa.nombre }} {{ ppa.apellidos }}
               </p>
-              <p class="text-xs text-slate-400">
-                PPA activo
-              </p>
+              <div class="flex gap-2 mt-1 flex-wrap text-xs">
+  <!-- Departamento -->
+  <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
+    {{ ppa.departamento }}
+  </span>
+
+  <!-- Carrera -->
+  <span class="px-2 py-1 bg-blue-100 text-blue-600 rounded-full">
+    {{ ppa.carrera }}
+  </span>
+
+  <!-- Año -->
+  <span class="px-2 py-1 bg-indigo-100 text-indigo-600 rounded-full">
+    {{ ppa.anio }}
+  </span>
+</div>
             </div>
 
             <div class="flex gap-2">
@@ -136,7 +190,9 @@
     </button>
             </div>
           </li>
-
+<p v-if="ppaFiltrados.length === 0" class="text-xs text-slate-400 text-center py-3">
+  No se encontraron resultados
+</p>
         </ul>
       </div>
 
@@ -145,25 +201,26 @@
   </div>
 
   <!-- 🔴 ACCIONES FIJAS ABAJO (SIN DOBLE DIV) -->
-   <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm">
-    <div class="flex justify-end">
-       <button
-      class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600 transition"
-    >
-      <!-- ICONO -->
-      <svg xmlns="http://www.w3.org/2000/svg" 
-           fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-           class="w-5 h-5">
-        <path stroke-linecap="round" stroke-linejoin="round"
-          d="M12 16v-8m0 0l-3 3m3-3l3 3M4 20h16" />
-      </svg>
+   <div class="fixed bottom-6 right-6 z-50">
+  <button
+    class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" 
+         fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+         class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M12 16v-8m0 0l-3 3m3-3l3 3M4 20h16" />
+    </svg>
 
-      Generar Resolución Decanal
-    </button>
-    </div>
-  </div>
+    Generar Resolución Decanal
+  </button>
+</div>
 
 </div>
+<ExportModal
+  :show="showExportModal"
+  @close="showExportModal = false"
+/>
 </template>
 
 
@@ -173,6 +230,12 @@ import { ref, onMounted } from 'vue'
 import api from '../api/axios'
 import { cursoSeleccionado, anioSeleccionado } from '../store/context'
 import DesignarModal from './DesignarModal.vue'
+import { computed } from 'vue'
+const showExportModal = ref(false)
+
+
+const searchPPA = ref('')
+const searchOpenPPA = ref(false)
 const profesores = ref([])
 const ppaList = ref([])
 const showProfesores = ref(false)
@@ -193,15 +256,15 @@ async function loadProfesores() {
 
 
 
-async function confirmRatify(profesor) {
+async function confirmRatify(ppa) {
   openConfirm(
-    `¿Desea ratificar a ${profesor.nombre}?`,
+    `¿Desea ratificar a ${ppa.nombre}?`,
     async () => {
       try {
         await api.post('/ppa/ratificar', {
-          id_profesor: profesor.id,
-          id_curso: cursoSeleccionado.value,
-          id_a_academico: anioSeleccionado.value
+          id_profesor: ppa.id,
+          id_a_academico: ppa.id_a_academico,
+          id_curso: ppa.id_curso
         })
 
         showToast('PPA ratificado correctamente', 'success')
@@ -209,22 +272,25 @@ async function confirmRatify(profesor) {
 
       } catch (error) {
         console.log(error.response)
-        showToast('Error al ratificar', 'error')
+        showToast(
+          error.response?.data?.message || 'Error al ratificar',
+          'error'
+        )
       }
     }
   )
 }
 
 
-async function confirmRemove(profesor) {
+async function confirmRemove(ppa) {
   openConfirm(
-    `¿Eliminar a ${profesor.nombre} como PPA?`,
+    `¿Eliminar a ${ppa.nombre} como PPA?`,
     async () => {
       try {
         await api.post('/ppa/desnombrar', {
-          id_profesor: profesor.id,
-          id_curso: cursoSeleccionado.value,
-          id_a_academico: anioSeleccionado.value
+          id_profesor: ppa.id,
+          id_a_academico: ppa.id_a_academico,
+          id_curso: ppa.id_curso
         })
 
         showToast('PPA eliminado correctamente', 'warning')
@@ -232,7 +298,10 @@ async function confirmRemove(profesor) {
 
       } catch (error) {
         console.log(error.response)
-        showToast('Error al eliminar', 'error')
+        showToast(
+          error.response?.data?.message || 'Error al eliminar',
+          'error'
+        )
       }
     }
   )
@@ -294,6 +363,38 @@ async function handleConfirm() {
 function asignar(profesor) {
   profesorSeleccionado.value = profesor
   showModal.value = true
+}
+function normalizarTexto(texto) {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+const ppaFiltrados = computed(() => {
+  if (!searchPPA.value) return ppaList.value
+
+  const busqueda = normalizarTexto(searchPPA.value)
+
+  return ppaList.value.filter(ppa => {
+    const nombre = normalizarTexto(
+      `${ppa.nombre} ${ppa.apellidos}`
+    )
+    return nombre.includes(busqueda)
+  })
+})
+function toggleSearchPPA() {
+  searchOpenPPA.value = !searchOpenPPA.value
+
+  if (searchOpenPPA.value) {
+    setTimeout(() => {
+      document.querySelector('input[placeholder="Buscar..."]')?.focus()
+    }, 200)
+  } else {
+    searchPPA.value = ''
+  }
+}
+function exportarProfesores() {
+  showExportModal.value = true
 }
 </script>
 

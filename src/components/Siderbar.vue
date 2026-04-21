@@ -102,7 +102,10 @@
 </div>
 
     <div class="border-t pt-3 space-y-2">
-      <button class="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-blue-50 transition text-slate-700">
+      <button
+  @click="showPerfil = true"
+  class="flex items-center gap-2 w-full px-3 py-2 rounded-lg hover:bg-blue-50 transition text-slate-700"
+>
   <UserCircleIcon class="w-4 h-4" />
   Perfil
 </button>
@@ -120,6 +123,10 @@
 </div>
 
   </aside>
+  <PerfilModal
+  :show="showPerfil"
+  @close="showPerfil = false"
+/>
 </template>
 
 <style scoped>
@@ -181,6 +188,8 @@ defineEmits(['change', 'openConfig'])
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
+import PerfilModal from './PerfilModal.vue'
+const showPerfil = ref(false)
 const menuRef = ref(null)
 const user = ref(null)
 const showMenu = ref(false)
