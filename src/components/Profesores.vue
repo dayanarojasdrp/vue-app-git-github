@@ -204,8 +204,9 @@
   <!-- 🔴 ACCIONES FIJAS ABAJO (SIN DOBLE DIV) -->
    <div class="fixed bottom-6 right-6 z-50">
   <button
-    class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition"
-  >
+  @click="showResolucionModal = true"
+  class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition"
+>
     <svg xmlns="http://www.w3.org/2000/svg" 
          fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
          class="w-5 h-5">
@@ -218,7 +219,10 @@
 </div>
 
 </div>
-
+<ResolucionModal
+  :show="showResolucionModal"
+  @close="showResolucionModal = false"
+/>
 </template>
 
 
@@ -231,9 +235,10 @@ import DesignarModal from './DesignarModal.vue'
 import { computed } from 'vue'
 import HeaderBar from './HeaderBar.vue'
 import ExportModal from './ExportModal.vue'
+import ResolucionModal from './ResolucionModal.vue'
 const showExportModal = ref(false)
 
-
+const showResolucionModal = ref(false)
 const searchPPA = ref('')
 const searchOpenPPA = ref(false)
 const profesores = ref([])
