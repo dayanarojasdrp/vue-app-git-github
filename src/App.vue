@@ -25,10 +25,10 @@
 
 <main class="flex-1 bg-slate-100 p-6 overflow-y-auto">
   <Panel v-if="active === 'panel'" :key="panelKey" />
-  <Profesores v-if="active === 'profesores'" />
-  <Estudiantes v-if="active === 'estudiantes'" />
-  <Documentos v-if="active === 'documentos'" />
-  <Usuarios v-if="active === 'usuarios'" />
+  <Profesores v-if="active === 'profesores'" :key="'profesores'" />
+<Estudiantes v-if="active === 'estudiantes'" :key="'estudiantes'" />
+<Documentos v-if="active === 'documentos'" :key="'documentos'" />
+<Usuarios v-if="active === 'usuarios'" :key="'usuarios'" />
 </main>
 
     </div>
@@ -100,4 +100,8 @@ function handleExport() {
     console.log('Exportar estudiantes')
   }
 }
+watch(active, () => {
+  // 🔥 limpiar modales globalmente
+  document.body.classList.remove('overflow-hidden')
+})
 </script>

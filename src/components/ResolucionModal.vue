@@ -56,42 +56,23 @@ defineProps({
 const emit = defineEmits(['close'])
 
 async function exportar(tipo) {
-      console.log('CLICK EN BOTÓN:', tipo)
-  try {
-    const url =
-      tipo === 'pdf'
-        ? '/api/export/resolucion/pdf'
-        : '/api/export/resolucion/word'
+  const url =
+    tipo === 'pdf'
+      ? 'http://localhost:8000/api/export/resolucion/pdf'
+      : 'http://localhost:8000/api/export/resolucion/word'
 
-    const res = await api.get(url, {
-      responseType: 'blob',
-      headers: {
-        Accept: 'application/octet-stream'
-      }
-    })
+  const link = document.createElement('a')
+  link.href = url
 
-    const blob = new Blob([res.data], {
-      type: tipo === 'pdf'
-        ? 'application/pdf'
-        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    })
+  link.download =
+    tipo === 'pdf'
+      ? 'resolucion.pdf'
+      : 'resolucion.docx'
 
-    const link = document.createElement('a')
-    link.href = window.URL.createObjectURL(blob)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
 
-    link.download =
-      tipo === 'pdf'
-        ? 'resolucion.pdf'
-        : 'resolucion.docx'
-
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-
-    emit('close')
-
-  } catch (error) {
-    console.error('ERROR EXPORTANDO:', error)
-  }
+  emit('close')
 }
 </script>
