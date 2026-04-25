@@ -14,7 +14,7 @@ api.interceptors.request.use(config => {
   const user = getUser()
 
   if (user) {
-    config.headers['X-User'] = user.name
+    config.headers['X-User'] = user.username
   }
 
   // 👇 AGREGA ESTO

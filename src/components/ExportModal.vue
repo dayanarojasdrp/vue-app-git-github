@@ -47,16 +47,19 @@
 import api from '../api/axios'
 
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
+  tipo: String // 🔥 NUEVO
 })
 
 const emit = defineEmits(['close'])
 
 async function exportar(tipo) {
   try {
-    const url = tipo === 'pdf'
-      ? '/export/ppa/pdf'
-      : '/export/ppa/word'
+    const base = props.tipo === 'aa' ? 'aa' : 'ppa'
+
+const url = tipo === 'pdf'
+  ? `/export/${base}/pdf`
+  : `/export/${base}/word`
 
     const res = await api.get(url, {
       responseType: 'blob'
@@ -65,7 +68,9 @@ async function exportar(tipo) {
     const blob = new Blob([res.data])
     const link = document.createElement('a')
     link.href = window.URL.createObjectURL(blob)
-    link.download = tipo === 'pdf' ? 'ppa.pdf' : 'ppa.docx'
+   link.download = tipo === 'pdf'
+  ? `${base}.pdf`
+  : `${base}.docx`
     link.click()
 
     emit('close')

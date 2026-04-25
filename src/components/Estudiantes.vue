@@ -143,18 +143,18 @@
             class="flex justify-between items-center bg-slate-50 rounded-lg px-2 py-1"
           >
             <div>
-              <p class="text-sm font-medium">
-                {{ aa.nombre }} {{ aa.apellidos }}
-              </p>
+             <p class="text-sm font-medium">
+  {{ aa.nombre_completo }}
+</p>
               <div class="flex gap-2 mt-1 flex-wrap text-xs">
   <!-- Departamento -->
   <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
-    {{ aa.nombre_tutor }}
+    {{ aa.tutor }}
   </span>
 
   <!-- Carrera -->
   <span class="px-2 py-1 bg-blue-100 text-blue-600 rounded-full">
-    {{ aa.etapa }}
+    Etapa {{ aa.etapa }}
   </span>
 
   <!-- Año -->
@@ -219,6 +219,7 @@
 </div>
 <ResolucionModal
   :show="showResolucionModal"
+  tipo="aa"
   @close="showResolucionModal = false"
 />
 </template>
@@ -273,21 +274,8 @@ async function loadEstudiantes() {
 
 async function loadAA() {
   try {
-    const res = await api.get('/alumno-ayudante')
-
-    // 🔥 1. solo habilitados
-    const activos = res.data.filter(a => a.habilitado === 1)
-
-    // 🔥 2. eliminar duplicados por estudiante
-    const unicos = Object.values(
-      activos.reduce((acc, item) => {
-        acc[item.id_estudiante] = item
-        return acc
-      }, {})
-    )
-
-    aaList.value = unicos
-
+    const res = await api.get('/alumno-ayudante/activos')
+    aaList.value = res.data
   } catch (error) {
     console.error(error)
     showToast('Error cargando AA', 'error')

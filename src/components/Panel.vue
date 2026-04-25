@@ -70,15 +70,50 @@
           No hay AA vigentes
         </p>
 
-        <ul v-else class="space-y-2">
-          <li
-            v-for="(aa, index) in aaList"
-            :key="index"
-            class="border rounded-lg p-3"
-          >
-            {{ aa }}
-          </li>
-        </ul>
+       <ul v-else class="space-y-2">
+  <li
+    v-for="aa in aaList"
+    :key="aa.id"
+    class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-xl px-3 py-2"
+  >
+    <!-- IZQUIERDA -->
+    <div class="flex items-center gap-3">
+
+      <!-- 👤 ICONO -->
+      <div class="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="w-4 h-4 text-blue-500"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M5.121 17.804A9 9 0 1118.879 17.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+
+      <!-- TEXTO -->
+      <div>
+        <p class="text-sm font-medium leading-tight">
+          {{ aa.nombre_completo }}
+        </p>
+
+        <!-- 🔥 BADGES -->
+        <div class="flex gap-1 mt-1 flex-wrap text-[10px]">
+
+          <!-- tutor -->
+          <span class="px-2 py-[2px] bg-slate-200 text-slate-600 rounded-full">
+            {{ aa.tutor }}
+          </span>
+
+          <!-- etapa -->
+          <span class="px-2 py-[2px] bg-blue-100 text-blue-600 rounded-full">
+           {{ aa.numero_carnet }}
+          </span>
+
+        </div>
+      </div>
+
+    </div>
+  </li>
+</ul>
       </div>
     </section>
   </div>
@@ -252,4 +287,21 @@ const ppaUnicos = computed(() => {
 
   return Array.from(mapa.values())
 })
+onMounted(() => {
+  loadPPA()
+  loadAA()
+
+  setInterval(() => {
+    loadPPA()
+    loadAA()
+  }, 3000)
+})
+async function loadAA() {
+  try {
+    const res = await axios.get('http://localhost:8000/api/alumno-ayudante/activos')
+    aaList.value = res.data
+  } catch (error) {
+    console.error(error)
+  }
+}
 </script>

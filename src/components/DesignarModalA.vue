@@ -38,7 +38,8 @@
     <!-- BUSCADOR -->
     <div class="relative flex items-center">
       <input
-        v-model="search"
+  ref="searchInput"
+  v-model="search"
         type="text"
         placeholder="Buscar..."
         class="transition-all duration-300 ease-in-out
@@ -122,6 +123,7 @@
     <!-- 🔍 BUSCADOR -->
     <div class="relative flex items-center">
       <input
+      ref="searchInput"
         v-model="searchProf"
         type="text"
         placeholder="Buscar..."
@@ -246,7 +248,9 @@
 </template>
 
 <script setup>
+import { nextTick } from 'vue'
 import { ref, computed, watch } from 'vue'
+import { successAlert, errorAlert } from '../utiles/alerts'
 import api from '../api/axios'
 import {
   MagnifyingGlassIcon,
@@ -274,7 +278,7 @@ const departamentos = ref([])
 const profesores = ref([])
 const search = ref('')
 const searchOpen = ref(false)
-
+const searchInput = ref(null)
 const estudiantesFiltrados = computed(() => {
   if (!search.value) return props.estudiantes
 
@@ -284,9 +288,7 @@ const estudiantesFiltrados = computed(() => {
   )
 })
 
-function toggleSearch() {
-  searchOpen.value = !searchOpen.value
-}
+
 // RESET
 watch(() => props.modelValue, (val) => {
   if (val) {
@@ -345,8 +347,10 @@ async function crearAA() {
       nombre_tutor: `${profesorSeleccionado.value?.nombre} ${profesorSeleccionado.value?.apellidos}`,
       etapa: String(etapaSeleccionada.value)
     })
-
-    console.log('AA CREADO ✅')
+   successAlert(
+  `Alumno ayudante asignado correctamente`
+)
+   
 
     emit('aa-creado')
     emit('update:modelValue', false)
@@ -354,7 +358,9 @@ async function crearAA() {
   } catch (error) {
     console.error('ERROR BACKEND:', error.response || error)
 
-    alert(error.response?.data?.message || 'Error creando AA')
+    errorAlert(
+  error.response?.data?.message || 'Error creando AA'
+)
   }
 }
 function volverPaso() {
@@ -376,6 +382,16 @@ const profesoresFiltrados = computed(() => {
 
 function toggleSearchProf() {
   searchOpenProf.value = !searchOpenProf.value
+}
+async function toggleSearch() {
+  searchOpen.value = !searchOpen.value
+
+  if (searchOpen.value) {
+    await nextTick()
+    searchInput.value?.focus()   // 🔥 AUTOFOCUS
+  } else {
+    search.value = ''
+  }
 }
 </script>
 

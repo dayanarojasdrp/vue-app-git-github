@@ -14,12 +14,16 @@
     <div class="flex-1 flex flex-col">
 
       <!-- HEADER -->
-      <HeaderBar @exportar="handleExport" />
+     <HeaderBar 
+  @exportar="handleExport"
+  :mostrarExportar="active === 'profesores' || active === 'estudiantes'"
+/>
 
 
 
 <ExportModal
   :show="showExportModal"
+  :tipo="exportTipo"
   @close="showExportModal = false"
 />
 
@@ -63,7 +67,7 @@ const showConfig = ref(false)
 const active = ref('panel')
 const panelKey = ref(0)
 const isLogged = ref(false)
-
+const exportTipo = ref(null)
 watch(active, (value) => {
   if (value === 'panel') {
     panelKey.value++
@@ -93,11 +97,13 @@ function handleLogin() {
 }
 function handleExport() {
   if (active.value === 'profesores') {
+    exportTipo.value = 'ppa'
     showExportModal.value = true
   }
 
   if (active.value === 'estudiantes') {
-    console.log('Exportar estudiantes')
+    exportTipo.value = 'aa'
+    showExportModal.value = true
   }
 }
 watch(active, () => {

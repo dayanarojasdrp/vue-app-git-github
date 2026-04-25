@@ -83,9 +83,9 @@ watch(() => props.show, async (nuevoValor) => {
 
     try {
       const res = await api.get('/logs', {
-        params: {
-          usuario: user.value?.name
-        }
+      params: {
+  usuario: user.value?.username // 🔥 ESTE
+}
       })
 
       logs.value = res.data

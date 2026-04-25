@@ -2,10 +2,10 @@
   <div class="sticky top-0 z-50 bg-blue-50 border-b border-blue-100 px-6 py-4 flex justify-between items-center shadow-sm">
 
     <!-- IZQUIERDA -->
-    <div>
-      <h1 class="text-xl font-semibold text-slate-800">
-        {{ title }}
-      </h1>
+    <div class="leading-tight">
+      <h1 class="text-sm font-semibold text-slate-800">
+        PPA y AA
+      </h1><br/>
 
       <!-- SLOT (para tabs tipo PPA / AA si quieres) -->
       <div v-if="$slots.extra" class="mt-2">
@@ -20,7 +20,8 @@
       <slot name="actions"></slot>
 
       <!-- BOTÓN EXPORTAR DEFAULT -->
-      <button
+     <button
+  v-if="mostrarExportar"
   @click="emit('exportar')"
   class="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl shadow-md hover:scale-[1.03] transition"
 >
@@ -46,7 +47,8 @@
 <script setup>
 
 const emit = defineEmits(['exportar'])
-defineProps({
-  title: String
+const props = defineProps({
+  title: String,
+  mostrarExportar: Boolean
 })
 </script>

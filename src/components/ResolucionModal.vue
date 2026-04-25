@@ -49,25 +49,30 @@
 <script setup>
 import api from '../api/axios'
 
-defineProps({
-  show: Boolean
-})
+
 
 const emit = defineEmits(['close'])
 
-async function exportar(tipo) {
+async function exportar(formato) {
+
+  let base = 'resolucion/ppa'
+
+  if (props.tipo === 'aa') {
+    base = 'resolucion/aa'
+  }
+
   const url =
-    tipo === 'pdf'
-      ? 'http://localhost:8000/api/export/resolucion/pdf'
-      : 'http://localhost:8000/api/export/resolucion/word'
+    formato === 'pdf'
+      ? `http://localhost:8000/api/export/${base}/pdf`
+      : `http://localhost:8000/api/export/${base}/word`
 
   const link = document.createElement('a')
   link.href = url
 
   link.download =
-    tipo === 'pdf'
-      ? 'resolucion.pdf'
-      : 'resolucion.docx'
+    formato === 'pdf'
+      ? `${props.tipo}_resolucion.pdf`
+      : `${props.tipo}_resolucion.docx`
 
   document.body.appendChild(link)
   link.click()
@@ -75,4 +80,11 @@ async function exportar(tipo) {
 
   emit('close')
 }
+const props = defineProps({
+  show: Boolean,
+  tipo: {
+    type: String,
+    default: 'ppa'
+  }
+})
 </script>
