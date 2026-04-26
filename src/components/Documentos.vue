@@ -270,8 +270,12 @@ async function generarHistorial() {
   }
 
   try {
-    const res = await api.post('/documentos/historial', {
-      tipo: histTipo.value,
+    // 🔥 decidir ruta según tipo
+    const url = histTipo.value === 'ppa'
+      ? '/documentos/historial'
+      : '/documentos/historial-aa'
+
+    const res = await api.post(url, {
       desde: desde.value,
       hasta: hasta.value
     }, {
@@ -280,33 +284,24 @@ async function generarHistorial() {
 
     console.log("OK BACK")
 
-    // 🔥 VALIDAR QUE VIENE DATA
     if (!res.data || res.data.size === 0) {
       alert("No hay datos para ese rango")
       return
     }
 
     const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
+    const fileURL = window.URL.createObjectURL(blob)
 
     const link = document.createElement('a')
-    link.href = url
+    link.href = fileURL
     link.download = `Historial_${histTipo.value}_${desde.value}_${hasta.value}.pdf`
     link.click()
 
-    // 🔥 refrescar lista
     await cargarDocumentos()
-
     openModal.value = false
 
   } catch (error) {
     console.error("ERROR COMPLETO:", error)
-
-    if (error.response) {
-      console.error("DATA:", error.response.data)
-      console.error("STATUS:", error.response.status)
-    }
-
     alert("Error generando historial")
   }
 }
