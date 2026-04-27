@@ -26,7 +26,7 @@
 </div>
 
       <!-- STEP 1: PROFESOR -->
-      <div v-show="step === 1">
+      <div v-show="step === 2">
         <div class="flex items-center justify-between mb-3">
 
   <h3 class="text-sm font-semibold text-slate-700">
@@ -94,7 +94,7 @@
       </div>
 
       <!-- STEP 2: DEPARTAMENTO -->
-      <div v-show="step === 2">
+      <div v-show="step === 1">
         <h3 class="mb-2">Seleccionar Departamento</h3>
 
         <div
@@ -219,12 +219,13 @@ const searchOpen = ref(false)
 const departamentoSeleccionado = ref(null)
 const carreraSeleccionada = ref(null)
 const anioSeleccionado = ref(null)
+const profesores = ref([])
 const profesoresFiltrados = computed(() => {
-  if (!search.value) return props.profesores
+  if (!search.value) return profesores.value
 
   const busqueda = normalizarTexto(search.value)
 
-  return props.profesores.filter(prof => {
+  return profesores.value.filter(prof => {
     const nombreCompleto = normalizarTexto(
       `${prof.nombre} ${prof.apellidos}`
     )
@@ -239,24 +240,29 @@ const resolverConfirmacion = ref(null)
 watch(() => props.modelValue, async (val) => {
   if (val) {
     step.value = 1
+
     profesorSeleccionado.value = null
-    departamentos.value = []
+    departamentoSeleccionado.value = null
+    carreraSeleccionada.value = null
+    anioSeleccionado.value = null
+
     carreras.value = []
     anios.value = []
-    search.value = '' // 🔥 LIMPIA EL BUSCADOR
+    search.value = ''
+
+    await cargarDepartamentos() // 🔥 al final
   }
 })
 
 
 // ✅ STEP 1
-async function selectProfesor(prof) {
- 
-
+function selectProfesor(prof) {
   profesorSeleccionado.value = prof
-  await cargarDepartamentos()
-  step.value = 2
-}
 
+  cargarCarreras(departamentoSeleccionado.value.id)
+
+  step.value = 3
+}
 
 // ✅ STEP 2
 async function cargarDepartamentos() {
@@ -272,12 +278,15 @@ async function cargarDepartamentos() {
 }
 }
 
-function selectDepartamento(dep) {
+async function selectDepartamento(dep) {
   departamentoSeleccionado.value = dep
 
-  cargarCarreras(dep.id)
+  // 🔥 cargar SOLO profesores de ese departamento
+  const res = await api.get(`/miembro-departamento/activos/${dep.id}`)
 
-  step.value = 3
+  profesores.value = res.data.map(m => m.profesor)
+
+  step.value = 2
 }
 
 

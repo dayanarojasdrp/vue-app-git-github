@@ -138,7 +138,13 @@
   <div class="bg-white rounded-2xl p-6 w-[400px] space-y-4">
 
     <h2 class="text-lg font-semibold">Generar Historial</h2>
-
+<!-- 🔥 MENSAJE DE ERROR BONITO -->
+<div
+  v-if="errorMsg"
+  class="bg-red-50 border border-red-200 text-red-600 text-sm px-3 py-2 rounded-lg"
+>
+  {{ errorMsg }}
+</div>
     <!-- TIPO -->
     <div>
       <label class="text-sm text-slate-500">Tipo</label>
@@ -184,6 +190,7 @@
 
   </div>
 </div>
+
 </template>
 
 <script setup>
@@ -201,7 +208,7 @@ const openModal = ref(false)
 const histTipo = ref('ppa')
 const desde = ref('')
 const hasta = ref('')
-
+const errorMsg = ref('')
 // 🔥 cargar documentos
 async function cargarDocumentos() {
   try {
@@ -263,9 +270,15 @@ onMounted(() => {
 })
 async function generarHistorial() {
   console.log("CLICK")
+errorMsg.value = '' 
+ if (!desde.value || !hasta.value) {
+    errorMsg.value = "Selecciona un rango de años"
+    return
+  }
 
-  if (!desde.value || !hasta.value) {
-    alert("Selecciona rango de años")
+  // 🔥 VALIDACIÓN NUEVA (CLAVE)
+  if (parseInt(desde.value) > parseInt(hasta.value)) {
+    errorMsg.value = "El año 'Desde' no puede ser mayor que 'Hasta'"
     return
   }
 
@@ -282,10 +295,10 @@ async function generarHistorial() {
       responseType: 'blob'
     })
 
-    console.log("OK BACK")
+    
 
     if (!res.data || res.data.size === 0) {
-      alert("No hay datos para ese rango")
+      errorMsg.value = "No hay datos para ese rango"
       return
     }
 
@@ -302,7 +315,7 @@ async function generarHistorial() {
 
   } catch (error) {
     console.error("ERROR COMPLETO:", error)
-    alert("Error generando historial")
+    errorMsg.value = "Error generando historial"
   }
 }
 </script>
