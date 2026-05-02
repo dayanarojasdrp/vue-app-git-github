@@ -1,105 +1,110 @@
-# README — Vue Project and Git/GitHub Learning Workflow
 
-## Overview  
-This repository contains my Vue application, which I used as a complete learning environment to practice real-world Git and GitHub workflows.  
-Throughout this project, I applied professional version control techniques, branching strategies, conflict resolution, SSH authentication, Pull Request workflows, and CI/CD automation using GitHub Actions.
+# Academic Appointment Management System – Frontend
 
-This project allowed me to strengthen both my development skills and my understanding of modern collaborative workflows used in software engineering teams.
+## About the Project
 
----
+This repository contains the Vue frontend of a web-based information system developed as part of a diploma thesis.
 
-## Phase 1 — Initial Setup (Git Basics)  
-During the initial setup of this Vue project, I practiced:
+The system supports the management of academic appointments for Year Lead Professors (PPA) and Teaching Assistant Students (AA) at Universidad Central “Marta Abreu” de Las Villas.
 
-- Creating a project directory  
-- Initializing a Git repository with `git init`  
-- Creating initial files such as `README.md` and Vue source files  
-- Making the first commit  
-- Creating a `.gitignore` file including entries such as:  
-  - node_modules/  
-  - dist/  
-  - .env  
+The application allows authorized users to register, review, consult, and manage appointment-related information, supporting the generation and historical consultation of official academic documents.
 
-This phase helped me understand how to structure a clean repository from the beginning.
+## Main Features
 
----
+- User authentication
+- Role-based interface
+- Management of Year Lead Professor appointments
+- Management of Teaching Assistant Student appointments
+- Ratification and removal workflows
+- Document generation support
+- Historical consultation of records
+- Search and filtering
+- Administrative dashboard
+- Integration with Laravel REST API
 
-## Phase 2 — Branching, Merging, and Conflict Resolution (Intermediate Git)  
-Using this project, I practiced:
+## User Roles
 
-- Creating feature branches with `git checkout -b`  
-- Making isolated commits for each feature  
-- Creating multiple branches from `main`  
-- Intentionally generating merge conflicts by modifying the same lines in different branches  
-- Resolving conflicts manually  
-- Merging branches back into `main`  
+- Department Head
+- Teaching Vice Dean
+- Dean
 
-This phase simulated real collaboration scenarios and taught me how to manage parallel work safely.
+## Technologies Used
 
----
+- Vue.js
+- Vite
+- JavaScript
+- Axios
+- Tailwind CSS
+- Laravel REST API backend
+- MySQL database
 
-## Phase 3 — GitHub: Repositories, Pull Requests, Reviews, and Protection Rules  
-Once the project was pushed to GitHub, I practiced:
+## System Context
 
-- Creating and connecting a remote repository  
-- Pushing branches with `git push -u origin`  
-- Opening Pull Requests with descriptions and comments  
-- Assigning reviewers  
-- Reviewing and discussing changes  
-- Configuring Branch Protection Rules, including:  
-  - Requiring Pull Requests  
-  - Requiring reviews  
-  - Blocking force pushes  
-  - Requiring passing checks  
-- Creating a CODEOWNERS file to define responsibility for changes  
+This frontend is part of a client-server web application.
 
-This phase helped me understand how teams collaborate and maintain code quality.
+The Vue client consumes services from a Laravel REST API. The backend manages the business logic, authentication, data validation, document generation, and persistence.
 
----
+## Project Structure
 
-## Phase 4 — Professional Authentication (SSH Keys)  
-To work securely with GitHub, I practiced:
+```txt
+src/
+  assets/
+  components/
+  views/
+  router/
+  services/
+````
 
-- Generating an SSH key using `ssh-keygen -t ed25519`  
-- Adding the public key to GitHub  
-- Switching my remote URL to SSH using:  
-  `git remote set-url origin git@github.com:username/repo.git`
+## Installation
 
-This improved my workflow by enabling secure, password‑less authentication.
+Clone the repository:
 
----
+```bash
+git clone https://github.com/dayanarojasdrp/vue-app-git-github.git
+cd vue-app-git-github
+```
 
-## Phase 5 — GitHub Actions (CI/CD Basics)  
-I created a complete CI workflow inside `.github/workflows/ci.yml`, which includes:
-
-- Triggers for push and pull_request  
-- Checkout step  
-- Node environment setup  
-- Dependency installation  
-- Tests (if present)  
-- Vue build  
-- Uploading build artifacts  
-
-This allowed me to validate every commit and Pull Request automatically, similar to a real production pipeline.
-
----
-
-## Vue Project Setup  
 Install dependencies:
 
-```
+```bash
 npm install
 ```
 
 Run the development server:
 
-```
+```bash
 npm run dev
 ```
 
 Build for production:
 
-```
+```bash
 npm run build
 ```
+
+## API Configuration
+
+Create a `.env` file in the project root:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+## Thesis Purpose
+
+The purpose of this system is to centralize information, reduce manual work, improve traceability, and support the generation of official academic resolutions related to PPA and AA appointments.
+
+## Future Improvements
+
+* Improve integration with institutional user services
+* Strengthen role validation
+* Improve responsive design
+* Add more automated tests
+* Improve accessibility
+* Add deployment documentation
+
+## Author
+
+Developed by Dayana Rojas
+
 
