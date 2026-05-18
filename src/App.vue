@@ -57,6 +57,8 @@ import Usuarios from './components/Usuarios.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import ConfigModal from './components/ConfigModal.vue'
 import ExportModal from './components/ExportModal.vue'
+import { canAccessApp } from './utiles/vicedecanos'
+import { getUser } from './utiles/auth'
 
 
 
@@ -75,8 +77,15 @@ watch(active, (value) => {
 })
 
 onMounted(() => {
-  const user = localStorage.getItem('user')
-  if (user) isLogged.value = true
+  const user = getUser()
+  if (user) {
+    if (canAccessApp(user.username)) {
+      isLogged.value = true
+    } else {
+      localStorage.removeItem('user')
+      localStorage.removeItem('loginTime')
+    }
+  }
 
   // ⏱️ AUTO LOGOUT
   const loginTime = localStorage.getItem('loginTime')

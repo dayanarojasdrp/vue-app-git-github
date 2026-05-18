@@ -1,68 +1,62 @@
 <template>
-  <div class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow">
+  <div class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800">Usuarios</h2>
+        <p class="text-sm text-slate-500">Usuarios disponibles en la API externa.</p>
+      </div>
 
-    <h2 class="text-xl font-bold mb-4">Agregar Usuario</h2>
-
-    <div class="space-y-4">
-
-      <!-- Username -->
-      <input
-        v-model="username"
-        placeholder="Nombre de usuario"
-        class="w-full px-4 py-2 border rounded-xl"
-      />
-
-      <!-- Rol -->
-      <select
-        v-model="role"
-        class="w-full px-4 py-2 border rounded-xl"
-      >
-        <option disabled value="">Selecciona un rol</option>
-        <option value="admin">Admin</option>
-        <option value="jefe de departamento">Jefe de departamento</option>
-        <option value="invitado">Invitado</option>
-      </select>
-
-      <!-- Botón -->
       <button
-        @click="crearUsuario"
-        class="w-full bg-blue-500 text-white py-2 rounded-xl"
+        @click="loadUsers"
+        :disabled="loading"
+        class="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition disabled:opacity-60"
       >
-        Crear usuario
+        {{ loading ? 'Cargando...' : 'Recargar' }}
       </button>
-
     </div>
 
+    <p v-if="error" class="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+      {{ error }}
+    </p>
+
+    <div class="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
+      <div
+        v-for="user in usuarios"
+        :key="user.username"
+        class="px-4 py-3"
+      >
+        <p class="font-medium text-slate-800">{{ user.username }}</p>
+        <p class="text-sm text-slate-500">{{ user.name }} · {{ user.role }}</p>
+      </div>
+
+      <p v-if="!loading && usuarios.length === 0" class="text-sm text-slate-500 text-center py-6">
+        No hay usuarios disponibles.
+      </p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { getUsers } from '../api/users'
 
-const username = ref('')
-const role = ref('')
+const usuarios = ref([])
+const loading = ref(false)
+const error = ref('')
 
-function crearUsuario() {
+onMounted(loadUsers)
 
-  if (!username.value || !role.value) {
-    alert('Completa los campos')
-    return
+async function loadUsers() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    usuarios.value = await getUsers()
+  } catch (err) {
+    usuarios.value = []
+    error.value = 'No se pudo cargar la API de usuarios'
+  } finally {
+    loading.value = false
   }
-
-  const usuarios = JSON.parse(localStorage.getItem('usuarios')) || []
-
-  usuarios.push({
-    username: username.value,
-    password: '123', // default
-    name: username.value,
-    role: role.value
-  })
-
-  localStorage.setItem('usuarios', JSON.stringify(usuarios))
-
-  alert('Usuario creado')
-
-  username.value = ''
-  role.value = ''
 }
 </script>

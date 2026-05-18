@@ -196,6 +196,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import api from '../api/axios'
+import { filterDocumentsByCurrentFaculty } from '../utiles/facultadScope'
 
 // 🔥 estados
 const cursos = ref([])
@@ -219,12 +220,15 @@ async function cargarDocumentos() {
       }
     })
 
-    documents.value = res.data.map(doc => ({
+    const filteredDocuments = filterDocumentsByCurrentFaculty(res.data)
+
+    documents.value = filteredDocuments.map(doc => ({
       id: doc.id,
       title: doc.nombre,
       type: doc.tipo,
       period: doc.periodo,
-      ruta: doc.ruta
+      ruta: doc.ruta,
+      facultyId: doc.facultad_id ?? doc.id_facultad ?? doc.facultyId
     }))
 
   } catch (error) {

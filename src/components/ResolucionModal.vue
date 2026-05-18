@@ -63,11 +63,18 @@ async function exportar(formato) {
 
   const url =
     formato === 'pdf'
-      ? `http://localhost:8000/api/export/${base}/pdf`
-      : `http://localhost:8000/api/export/${base}/word`
+      ? `/export/${base}/pdf`
+      : `/export/${base}/word`
+
+  const res = await api.get(url, {
+    responseType: 'blob'
+  })
+
+  const blob = new Blob([res.data])
+  const fileURL = window.URL.createObjectURL(blob)
 
   const link = document.createElement('a')
-  link.href = url
+  link.href = fileURL
 
   link.download =
     formato === 'pdf'
@@ -77,6 +84,7 @@ async function exportar(formato) {
   document.body.appendChild(link)
   link.click()
   link.remove()
+  window.URL.revokeObjectURL(fileURL)
 
   emit('close')
 }

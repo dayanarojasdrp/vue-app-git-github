@@ -73,7 +73,7 @@
        <ul v-else class="space-y-2">
   <li
     v-for="aa in aaList"
-    :key="aa.id"
+    :key="aa.key"
     class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-xl px-3 py-2"
   >
     <!-- IZQUIERDA -->
@@ -234,8 +234,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import api from '../api/axios'
 import { computed } from 'vue'
+import { filterByCurrentFaculty, filterStudentItemsByCurrentFaculty } from '../utiles/facultadScope'
 const ppaList = ref([])
 const aaList = ref([])
 
@@ -268,8 +269,8 @@ function confirmExport() {
 
 async function loadPPA() {
   try {
-    const response = await axios.get('http://localhost:8000/api/ppa')
-    ppaList.value = response.data
+    const response = await api.get('/ppa')
+    ppaList.value = await filterByCurrentFaculty(response.data)
   } catch (error) {
     console.error(error)
   }
@@ -298,10 +299,44 @@ onMounted(() => {
 })
 async function loadAA() {
   try {
-    const res = await axios.get('http://localhost:8000/api/alumno-ayudante/activos')
-    aaList.value = res.data
+    const res = await api.get('/alumno-ayudante/activos')
+    const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
+    aaList.value = deduplicateAA(filteredAA)
   } catch (error) {
     console.error(error)
   }
+}
+
+function normalizarTexto(texto = '') {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+function getAAUniqueKey(aa) {
+  return [
+    normalizarTexto(aa.nombre_completo || `${aa.nombre || ''} ${aa.apellidos || ''}`),
+    normalizarTexto(aa.tutor || aa.nombre_tutor || ''),
+    String(aa.etapa ?? '').trim()
+  ].join('|')
+}
+
+function deduplicateAA(items) {
+  const map = new Map()
+
+  items.forEach(aa => {
+    const key = getAAUniqueKey(aa)
+
+    if (!map.has(key)) {
+      map.set(key, {
+        ...aa,
+        key
+      })
+    }
+  })
+
+  return Array.from(map.values())
 }
 </script>

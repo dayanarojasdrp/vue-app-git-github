@@ -185,6 +185,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import api from '../api/axios'
+import { getCurrentUserFacultyId } from '../utiles/vicedecanos'
 import {
   UserIcon,
   BuildingOfficeIcon,
@@ -267,7 +268,14 @@ function selectProfesor(prof) {
 // ✅ STEP 2
 async function cargarDepartamentos() {
   try {
-    const res = await api.get('/facultad/1/departamentos')
+    const facultyId = getCurrentUserFacultyId()
+
+    if (!facultyId) {
+      errorAlert('No hay una facultad asociada al usuario actual')
+      return
+    }
+
+    const res = await api.get(`/facultad/${facultyId}/departamentos`)
 
     console.log('DEPARTAMENTOS:', res.data) // 👈 DEBUG
 
@@ -336,6 +344,11 @@ async function selectAnio(a) {
     console.log('CURSO:', cursoRes.data) // 👈 DEBUG
 
     const cursoId = cursoRes.data.id_curso
+
+    if (!cursoId) {
+      errorAlert('Ese año académico no tiene un curso asociado. No se puede completar la asignación PPA.')
+      return
+    }
 
     await crearPPA(cursoId)
 

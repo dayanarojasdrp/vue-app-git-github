@@ -236,6 +236,7 @@ import { computed } from 'vue'
 import HeaderBar from './HeaderBar.vue'
 import ExportModal from './ExportModal.vue'
 import ResolucionModal from './ResolucionModal.vue'
+import { filterByCurrentFaculty, getCurrentFacultyProfessors } from '../utiles/facultadScope'
 const showExportModal = ref(false)
 
 const showResolucionModal = ref(false)
@@ -249,8 +250,7 @@ const showModal = ref(false)
 
 async function loadProfesores() {
   try {
-    const response = await api.get('/profesor')
-    profesores.value = response.data.data
+    profesores.value = await getCurrentFacultyProfessors()
     showProfesores.value = true
   } catch (error) {
     alert('Error cargando profesores')
@@ -317,7 +317,7 @@ async function confirmRemove(ppa) {
 async function loadPPA() {
   try {
     const response = await api.get('/ppa')
-    ppaList.value = response.data
+    ppaList.value = await filterByCurrentFaculty(response.data)
   } catch (error) {
     console.error(error)
     alert('Error cargando PPA')

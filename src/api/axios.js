@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getUser } from '../utiles/auth'
+import { getCurrentUserFacultyId } from '../utiles/vicedecanos'
 import { cursoSeleccionado, anioSeleccionado } from '../store/context'
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
@@ -9,15 +10,54 @@ const api = axios.create({
   },
 })
 
-// 🔥 interceptor
+const userHeaderRoutes = [
+  /^\/?ppa\/designar$/,
+  /^\/?ppa\/ratificar$/,
+  /^\/?ppa\/desnombrar$/,
+  /^\/?alumno-ayudante\/designar$/,
+  /^\/?alumno-ayudante\/ratificar\/[^/]+$/,
+  /^\/?alumno-ayudante\/desnombrar\/[^/]+$/,
+  /^\/?documentos\/historial$/,
+  /^\/?documentos\/historial-aa$/,
+  /^\/?export\/.+$/,
+]
+
+function shouldSendUserHeader(config) {
+  const method = config.method?.toLowerCase()
+  const url = config.url?.split('?')[0] ?? ''
+
+  return ['get', 'post'].includes(method) && userHeaderRoutes.some(route => route.test(url))
+}
+
 api.interceptors.request.use(config => {
   const user = getUser()
 
-  if (user) {
+  if (user?.username && shouldSendUserHeader(config)) {
     config.headers['X-User'] = user.username
   }
 
-  // 👇 AGREGA ESTO
+  const facultyId = getCurrentUserFacultyId()
+
+  if (facultyId) {
+    config.headers['X-Facultad'] = facultyId
+
+    if (config.method?.toLowerCase() === 'get') {
+      config.params = {
+        ...(config.params ?? {}),
+        facultad_id: facultyId,
+        id_facultad: facultyId,
+      }
+    }
+
+    if (['post', 'put', 'patch'].includes(config.method?.toLowerCase()) && config.data instanceof FormData === false) {
+      config.data = {
+        ...(config.data ?? {}),
+        facultad_id: facultyId,
+        id_facultad: facultyId,
+      }
+    }
+  }
+
   if (cursoSeleccionado.value) {
     config.headers['X-Curso'] = cursoSeleccionado.value
   }

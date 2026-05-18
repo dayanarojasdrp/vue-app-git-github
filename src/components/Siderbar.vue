@@ -48,7 +48,7 @@
 </button>
 
     </nav>
-<div class="px-3 pb-2">
+<div v-if="canOpenConfig" class="px-3 pb-2">
  <button
   class="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition text-sm"
   @click="$emit('openConfig')"
@@ -189,24 +189,14 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
 import PerfilModal from './PerfilModal.vue'
+import { getUser } from '../utiles/auth'
 const showPerfil = ref(false)
 const menuRef = ref(null)
 const user = ref(null)
 const showMenu = ref(false)
 
-const tab = ref('usuarios')
-
-const newUser = ref('')
-const newRole = ref('')
-
-const usuarios = ref(JSON.parse(localStorage.getItem('usuarios')) || [])
-const userTab = ref('crear') // crear | editar | eliminar
-const selectedUser = ref(null)
 onMounted(() => {
-  const stored = localStorage.getItem('user')
-  if (stored) {
-    user.value = JSON.parse(stored)
-  }
+  user.value = getUser()
 })
 function handleClickOutside(event) {
   if (menuRef.value && !menuRef.value.contains(event.target)) {
@@ -227,6 +217,10 @@ const userInitial = computed(() => {
     : '?'
 })
 
+const canOpenConfig = computed(() => {
+  return ['vicedecano_docente', 'decano'].includes(user.value?.role)
+})
+
 function toggleMenu() {
   showMenu.value = !showMenu.value
 }
@@ -242,55 +236,4 @@ import {
   AcademicCapIcon,
   DocumentTextIcon
 } from '@heroicons/vue/24/outline'
-function tabClass(t) {
-  return [
-    'px-3 py-1 rounded-lg text-sm transition',
-    tab.value === t
-      ? 'bg-blue-500 text-white'
-      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-  ]
-}
-
-function addUser() {
-  if (!newUser.value || !newRole.value) return
-
-  usuarios.value.push({
-    username: newUser.value,
-    password: '123',
-    name: newUser.value,
-    role: newRole.value
-  })
-
-  localStorage.setItem('usuarios', JSON.stringify(usuarios.value))
-
-  newUser.value = ''
-  newRole.value = ''
-}
-
-function deleteUser(u) {
-  usuarios.value = usuarios.value.filter(x => x.username !== u.username)
-  localStorage.setItem('usuarios', JSON.stringify(usuarios.value))
-}
-
-function editUser(u) {
-  newUser.value = u.username
-  newRole.value = u.role
-}
-function subTab(active, t) {
-  return [
-    'px-3 py-1 text-xs rounded-lg transition',
-    active === t
-      ? 'bg-blue-500 text-white'
-      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-  ]
-}
-function updateUser() {
-  if (!selectedUser.value || !newRole.value) return
-
-  selectedUser.value.role = newRole.value
-
-  localStorage.setItem('usuarios', JSON.stringify(usuarios.value))
-
-  newRole.value = ''
-}
 </script>

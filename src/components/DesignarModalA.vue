@@ -252,6 +252,7 @@ import { nextTick } from 'vue'
 import { ref, computed, watch } from 'vue'
 import { successAlert, errorAlert } from '../utiles/alerts'
 import api from '../api/axios'
+import { getCurrentUserFacultyId } from '../utiles/vicedecanos'
 import {
   MagnifyingGlassIcon,
   UserIcon,
@@ -306,7 +307,14 @@ function selectEstudiante(est) {
 }
 async function cargarDepartamentos() {
   try {
-    const res = await api.get('/facultad/1/departamentos')
+    const facultyId = getCurrentUserFacultyId()
+
+    if (!facultyId) {
+      errorAlert('No hay una facultad asociada al usuario actual')
+      return
+    }
+
+    const res = await api.get(`/facultad/${facultyId}/departamentos`)
 
     console.log('DEPARTAMENTOS:', res.data) // 👈 DEBUG
 

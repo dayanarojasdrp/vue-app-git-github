@@ -139,7 +139,7 @@
 
           <li
             v-for="aa in aaFiltrados"
-            :key="aa.id"
+            :key="aa.key"
             class="flex justify-between items-center bg-slate-50 rounded-lg px-2 py-1"
           >
             <div>
@@ -258,14 +258,15 @@ const confirmModal = ref({
   action: null
 })
 import { onUnmounted } from 'vue'
+import { filterStudentItemsByCurrentFaculty, filterStudentsByCurrentFaculty } from '../utiles/facultadScope'
 // =======================
 // 🔹 LOADERS
 // =======================
 async function loadEstudiantes() {
   try {
     const res = await api.get('/estudiante')
-    // adapta si tu API no usa .data.data
-    estudiantes.value = res.data.data ?? res.data
+    const data = res.data.data ?? res.data
+    estudiantes.value = await filterStudentsByCurrentFaculty(data)
   } catch (error) {
     console.error(error)
     showToast('Error cargando estudiantes', 'error')
@@ -275,11 +276,37 @@ async function loadEstudiantes() {
 async function loadAA() {
   try {
     const res = await api.get('/alumno-ayudante/activos')
-    aaList.value = res.data
+    const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
+    aaList.value = deduplicateAA(filteredAA)
   } catch (error) {
     console.error(error)
     showToast('Error cargando AA', 'error')
   }
+}
+
+function getAAUniqueKey(aa) {
+  return [
+    normalizarTexto(aa.nombre_completo || `${aa.nombre || ''} ${aa.apellidos || ''}`),
+    normalizarTexto(aa.tutor || aa.nombre_tutor || ''),
+    String(aa.etapa ?? '').trim()
+  ].join('|')
+}
+
+function deduplicateAA(items) {
+  const map = new Map()
+
+  items.forEach(aa => {
+    const key = getAAUniqueKey(aa)
+
+    if (!map.has(key)) {
+      map.set(key, {
+        ...aa,
+        key
+      })
+    }
+  })
+
+  return Array.from(map.values())
 }
 onMounted(() => {
   loadAA()
