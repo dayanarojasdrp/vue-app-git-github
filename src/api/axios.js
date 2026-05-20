@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { getUser } from '../utiles/auth'
-import { getCurrentUserFacultyId } from '../utiles/vicedecanos'
+import { getCurrentUserAccess, getCurrentUserFacultyId } from '../utiles/vicedecanos'
 import { cursoSeleccionado, anioSeleccionado } from '../store/context'
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
@@ -37,15 +37,26 @@ api.interceptors.request.use(config => {
   }
 
   const facultyId = getCurrentUserFacultyId()
+  const currentAccess = getCurrentUserAccess()
+  const departmentId = currentAccess?.role === 'jefe_departamento'
+    ? currentAccess.departmentId
+    : null
 
   if (facultyId) {
     config.headers['X-Facultad'] = facultyId
+    if (departmentId) {
+      config.headers['X-Departamento'] = departmentId
+    }
 
     if (config.method?.toLowerCase() === 'get') {
       config.params = {
         ...(config.params ?? {}),
         facultad_id: facultyId,
         id_facultad: facultyId,
+        ...(departmentId ? {
+          departamento_id: departmentId,
+          id_departamento: departmentId,
+        } : {}),
       }
     }
 
@@ -54,6 +65,10 @@ api.interceptors.request.use(config => {
         ...(config.data ?? {}),
         facultad_id: facultyId,
         id_facultad: facultyId,
+        ...(departmentId ? {
+          departamento_id: departmentId,
+          id_departamento: departmentId,
+        } : {}),
       }
     }
   }

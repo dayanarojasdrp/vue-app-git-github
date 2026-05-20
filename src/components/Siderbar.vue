@@ -42,7 +42,7 @@
   Estudiantes
 </button>
 
-      <button class="link" :class="{ active: active === 'documentos' }" @click="$emit('change', 'documentos')">
+      <button v-if="canViewDocuments" class="link" :class="{ active: active === 'documentos' }" @click="$emit('change', 'documentos')">
   <DocumentTextIcon class="w-5 h-5 mr-3" />
   Documentos
 </button>
@@ -219,6 +219,10 @@ const userInitial = computed(() => {
 
 const canOpenConfig = computed(() => {
   return ['vicedecano_docente', 'decano'].includes(user.value?.role)
+})
+
+const canViewDocuments = computed(() => {
+  return user.value?.role !== 'jefe_departamento'
 })
 
 function toggleMenu() {

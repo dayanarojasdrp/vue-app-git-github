@@ -202,7 +202,7 @@
   </div>
 
   <!-- 🔴 ACCIONES FIJAS ABAJO (SIN DOBLE DIV) -->
-   <div class="fixed bottom-6 right-6 z-50">
+   <div v-if="!isDepartmentHead" class="fixed bottom-6 right-6 z-50">
   <button
   @click="showResolucionModal = true"
   class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition"
@@ -236,10 +236,12 @@ import { computed } from 'vue'
 import HeaderBar from './HeaderBar.vue'
 import ExportModal from './ExportModal.vue'
 import ResolucionModal from './ResolucionModal.vue'
-import { filterByCurrentFaculty, getCurrentFacultyProfessors } from '../utiles/facultadScope'
+import { filterByCurrentFaculty, filterPPAByCurrentDepartment, getCurrentDepartmentProfessors, getCurrentFacultyProfessors } from '../utiles/facultadScope'
+import { isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
 const showExportModal = ref(false)
 
 const showResolucionModal = ref(false)
+const isDepartmentHead = isCurrentUserDepartmentHead()
 const searchPPA = ref('')
 const searchOpenPPA = ref(false)
 const profesores = ref([])
@@ -250,7 +252,9 @@ const showModal = ref(false)
 
 async function loadProfesores() {
   try {
-    profesores.value = await getCurrentFacultyProfessors()
+    profesores.value = isCurrentUserDepartmentHead()
+      ? await getCurrentDepartmentProfessors()
+      : await getCurrentFacultyProfessors()
     showProfesores.value = true
   } catch (error) {
     alert('Error cargando profesores')
@@ -317,7 +321,9 @@ async function confirmRemove(ppa) {
 async function loadPPA() {
   try {
     const response = await api.get('/ppa')
-    ppaList.value = await filterByCurrentFaculty(response.data)
+    ppaList.value = isCurrentUserDepartmentHead()
+      ? await filterPPAByCurrentDepartment(response.data)
+      : await filterByCurrentFaculty(response.data)
   } catch (error) {
     console.error(error)
     alert('Error cargando PPA')

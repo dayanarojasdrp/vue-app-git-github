@@ -1,5 +1,5 @@
 import api from '../api/axios'
-import { getCurrentUserFacultyId } from './vicedecanos'
+import { getCurrentUserAccess, getCurrentUserFacultyId } from './vicedecanos'
 
 let cachedScope = null
 
@@ -156,4 +156,72 @@ export async function getCurrentFacultyProfessors() {
   }
 
   return Array.from(professorMap.values())
+}
+
+export async function getCurrentDepartmentProfessors() {
+  const access = getCurrentUserAccess()
+  const departmentId = access?.departmentId
+  if (!departmentId) return []
+
+  const response = await api.get(`/miembro-departamento/activos/${departmentId}`)
+  const miembros = Array.isArray(response.data) ? response.data : response.data?.data ?? []
+
+  return miembros
+    .map(miembro => miembro.profesor ?? miembro)
+    .filter(profesor => profesor?.id)
+}
+
+export async function filterPPAByCurrentDepartment(items) {
+  const profesores = await getCurrentDepartmentProfessors()
+  const professorIds = new Set(profesores.map(profesor => Number(profesor.id)))
+
+  return items.filter(item => professorIds.has(Number(item.id ?? item.id_profesor)))
+}
+
+async function getCurrentDepartmentGroupIds() {
+  const access = getCurrentUserAccess()
+  const departmentId = access?.departmentId
+  if (!departmentId) return new Set()
+
+  const carrerasRes = await api.get(`/departamento/${departmentId}/carreras`)
+  const carreras = Array.isArray(carrerasRes.data) ? carrerasRes.data : carrerasRes.data?.data ?? []
+  const careerIds = new Set(carreras.map(carrera => Number(carrera.id)))
+
+  const anoGrupoRes = await api.get('/ano-grupo')
+  const anoGrupo = Array.isArray(anoGrupoRes.data) ? anoGrupoRes.data : anoGrupoRes.data?.data ?? []
+
+  return new Set(
+    anoGrupo
+      .filter(item => careerIds.has(Number(item.ano_academico?.id_prog_form ?? item.id_prog_form)))
+      .map(item => Number(item.grupo_id ?? item.grupo?.id))
+      .filter(Boolean)
+  )
+}
+
+export async function getCurrentDepartmentStudentIds() {
+  const groupIds = await getCurrentDepartmentGroupIds()
+  if (groupIds.size === 0) return new Set()
+
+  const estudianteGrupoRes = await api.get('/estudiante-grupo')
+  const estudianteGrupo = Array.isArray(estudianteGrupoRes.data) ? estudianteGrupoRes.data : estudianteGrupoRes.data?.data ?? []
+
+  return new Set(
+    estudianteGrupo
+      .filter(item => groupIds.has(Number(item.grupo_id ?? item.grupo?.id)))
+      .map(item => Number(item.estudiante_id ?? item.estudiante?.id))
+      .filter(Boolean)
+  )
+}
+
+export async function filterStudentsByCurrentDepartment(students) {
+  const studentIds = await getCurrentDepartmentStudentIds()
+  return students.filter(student => studentIds.has(Number(student.id ?? student.estudiante_id ?? student.estudiante?.id)))
+}
+
+export async function filterStudentItemsByCurrentDepartment(items) {
+  const studentIds = await getCurrentDepartmentStudentIds()
+  return items.filter(item => {
+    const studentId = item.estudiante_id ?? item.id_estudiante ?? item.estudiante?.id ?? item.alumno?.id
+    return studentIds.has(Number(studentId))
+  })
 }

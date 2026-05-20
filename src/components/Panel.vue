@@ -236,7 +236,8 @@
 import { ref, onMounted } from 'vue'
 import api from '../api/axios'
 import { computed } from 'vue'
-import { filterByCurrentFaculty, filterStudentItemsByCurrentFaculty } from '../utiles/facultadScope'
+import { filterByCurrentFaculty, filterPPAByCurrentDepartment, filterStudentItemsByCurrentDepartment, filterStudentItemsByCurrentFaculty } from '../utiles/facultadScope'
+import { isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
 const ppaList = ref([])
 const aaList = ref([])
 
@@ -270,7 +271,9 @@ function confirmExport() {
 async function loadPPA() {
   try {
     const response = await api.get('/ppa')
-    ppaList.value = await filterByCurrentFaculty(response.data)
+    ppaList.value = isCurrentUserDepartmentHead()
+      ? await filterPPAByCurrentDepartment(response.data)
+      : await filterByCurrentFaculty(response.data)
   } catch (error) {
     console.error(error)
   }
@@ -301,7 +304,11 @@ async function loadAA() {
   try {
     const res = await api.get('/alumno-ayudante/activos')
     const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
-    aaList.value = deduplicateAA(filteredAA)
+    aaList.value = deduplicateAA(
+      isCurrentUserDepartmentHead()
+        ? await filterStudentItemsByCurrentDepartment(res.data)
+        : filteredAA
+    )
   } catch (error) {
     console.error(error)
   }

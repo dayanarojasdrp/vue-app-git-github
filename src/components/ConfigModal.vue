@@ -81,7 +81,12 @@
             :key="`${log.accion}-${log.created_at}-${log.descripcion}`"
             class="px-3 py-2 bg-white"
           >
-            <p class="text-sm font-medium text-slate-700">{{ log.accion }}</p>
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium text-slate-700">{{ log.accion }}</p>
+              <span class="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                {{ logUsername(log) || 'Sin usuario' }}
+              </span>
+            </div>
             <p class="text-xs text-slate-500">{{ log.descripcion }}</p>
             <p class="text-[11px] text-slate-400 mt-1">{{ formatDate(log.created_at) }}</p>
           </div>
@@ -201,12 +206,8 @@
 import { computed, onMounted, ref } from 'vue'
 import api from '../api/axios'
 import { getUsers } from '../api/users'
+import { assignAccess, listFacultyAccess } from '../api/access'
 import {
-  assignDean,
-  assignDepartmentHead,
-  findDeanByFaculty,
-  findDepartmentHeadByDepartment,
-  getAccessUsersByFaculty,
   getCurrentUserFaculty
 } from '../utiles/vicedecanos'
 
@@ -252,12 +253,9 @@ async function reloadAll() {
   message.value = ''
 
   try {
-    await Promise.all([
-      loadUsers(),
-      loadAccessUsers(),
-      loadDepartments(),
-      loadLogs()
-    ])
+    await loadUsers()
+    await loadDepartments()
+    await Promise.all([loadAccessUsers(), loadLogs()])
   } finally {
     loading.value = false
   }
@@ -267,9 +265,9 @@ async function loadUsers() {
   allUsers.value = await getUsers()
 }
 
-function loadAccessUsers() {
+async function loadAccessUsers() {
   accessUsers.value = currentFaculty.value?.facultyId
-    ? getAccessUsersByFaculty(currentFaculty.value.facultyId)
+    ? enrichAccessUsers(await listFacultyAccess(currentFaculty.value.facultyId))
     : []
 }
 
@@ -302,6 +300,22 @@ function displayName(username) {
   return user?.name && user.name !== username ? user.name : username
 }
 
+function enrichAccessUsers(users) {
+  return users
+    .filter(item => ['vicedecano_docente', 'decano', 'jefe_departamento'].includes(item.role))
+    .map(item => {
+      const department = departments.value.find(dep => String(dep.id) === String(item.departmentId))
+
+      return {
+        ...item,
+        facultyId: item.facultyId ?? currentFaculty.value?.facultyId,
+        facultyName: currentFaculty.value?.facultyName,
+        facultyAbbreviation: currentFaculty.value?.facultyAbbreviation,
+        departmentName: department?.nombre ?? item.departmentName ?? null,
+      }
+    })
+}
+
 function currentFacultyForAssignment() {
   return {
     id: currentFaculty.value?.facultyId,
@@ -324,7 +338,7 @@ async function saveDean() {
 
   try {
     const faculty = currentFacultyForAssignment()
-    const currentDean = findDeanByFaculty(faculty.id)
+    const currentDean = accessUsers.value.find(item => item.role === 'decano')
 
     if (currentDean && currentDean.username !== username) {
       const confirmed = await showConfirm({
@@ -335,10 +349,17 @@ async function saveDean() {
       if (!confirmed) return
     }
 
-    assignDean({ username, faculty })
-    loadAccessUsers()
+    await assignAccess({
+      username,
+      role: 'decano',
+      facultyId: faculty.id,
+      departmentId: null,
+    })
+    await loadAccessUsers()
     deanUsername.value = ''
     setMessage('Acceso de decano actualizado correctamente', 'success')
+  } catch (error) {
+    setMessage(accessErrorMessage(error, 'No se pudo guardar el acceso del decano'), 'error')
   } finally {
     saving.value = false
   }
@@ -356,7 +377,9 @@ async function saveDepartmentHead() {
 
   try {
     const faculty = currentFacultyForAssignment()
-    const currentHead = findDepartmentHeadByDepartment(department.id)
+    const currentHead = accessUsers.value.find(
+      item => item.role === 'jefe_departamento' && String(item.departmentId) === String(department.id)
+    )
 
     if (currentHead && currentHead.username !== username) {
       const confirmed = await showConfirm({
@@ -367,14 +390,29 @@ async function saveDepartmentHead() {
       if (!confirmed) return
     }
 
-    assignDepartmentHead({ username, department, faculty })
-    loadAccessUsers()
+    await assignAccess({
+      username,
+      role: 'jefe_departamento',
+      facultyId: faculty.id,
+      departmentId: department.id,
+    })
+    await loadAccessUsers()
     departmentHeadUsername.value = ''
     selectedDepartmentId.value = ''
     setMessage('Acceso de jefe de departamento actualizado correctamente', 'success')
+  } catch (error) {
+    setMessage(accessErrorMessage(error, 'No se pudo guardar el acceso del jefe'), 'error')
   } finally {
     saving.value = false
   }
+}
+
+function accessErrorMessage(error, fallback) {
+  if (error?.response?.status === 422) {
+    return error.response.data?.message || 'Ese usuario no existe en la API'
+  }
+
+  return error?.response?.data?.message || fallback
 }
 
 function setMessage(text, type) {
@@ -403,5 +441,13 @@ function resolveConfirm(value) {
 
 function formatDate(value) {
   return new Date(value).toLocaleString()
+}
+
+function logUsername(log) {
+  const directUser = log.username ?? log.usuario ?? log.user?.username ?? log.user?.name ?? log.user
+  if (directUser) return directUser
+
+  const match = log.descripcion?.match(/\busuario\d+\b/i)
+  return match?.[0] ?? ''
 }
 </script>

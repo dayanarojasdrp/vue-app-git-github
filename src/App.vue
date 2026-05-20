@@ -1,5 +1,9 @@
 <template>
-  <Login v-if="!isLogged" @login="handleLogin" />
+  <div v-if="checkingSession" class="h-screen flex items-center justify-center bg-slate-100 text-slate-500">
+    Verificando sesión...
+  </div>
+
+  <Login v-else-if="!isLogged" @login="handleLogin" />
 
   <div v-else class="flex h-screen">
 
@@ -14,7 +18,7 @@
     <div class="flex-1 flex flex-col">
 
       <!-- HEADER -->
-     <HeaderBar 
+<HeaderBar 
   @exportar="handleExport"
   :mostrarExportar="active === 'profesores' || active === 'estudiantes'"
 />
@@ -31,7 +35,7 @@
   <Panel v-if="active === 'panel'" :key="panelKey" />
   <Profesores v-if="active === 'profesores'" :key="'profesores'" />
 <Estudiantes v-if="active === 'estudiantes'" :key="'estudiantes'" />
-<Documentos v-if="active === 'documentos'" :key="'documentos'" />
+<Documentos v-if="active === 'documentos' && !isDepartmentHead" :key="'documentos'" />
 <Usuarios v-if="active === 'usuarios'" :key="'usuarios'" />
 </main>
 
@@ -57,8 +61,9 @@ import Usuarios from './components/Usuarios.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import ConfigModal from './components/ConfigModal.vue'
 import ExportModal from './components/ExportModal.vue'
-import { canAccessApp } from './utiles/vicedecanos'
-import { getUser } from './utiles/auth'
+import { isCurrentUserDepartmentHead } from './utiles/vicedecanos'
+import { clearSession, getUser, saveSession } from './utiles/auth'
+import { buildSessionFromAccess } from './utiles/sessionAccess'
 
 
 
@@ -70,35 +75,50 @@ const active = ref('panel')
 const panelKey = ref(0)
 const isLogged = ref(false)
 const exportTipo = ref(null)
+const isDepartmentHead = ref(false)
+const checkingSession = ref(true)
 watch(active, (value) => {
   if (value === 'panel') {
     panelKey.value++
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   const user = getUser()
-  if (user) {
-    if (canAccessApp(user.username)) {
-      isLogged.value = true
-    } else {
-      localStorage.removeItem('user')
-      localStorage.removeItem('loginTime')
-    }
-  }
-
-  // ⏱️ AUTO LOGOUT
   const loginTime = localStorage.getItem('loginTime')
+
   if (loginTime) {
     const diff = Date.now() - loginTime
     const ONE_HOUR = 60 * 60 * 1000
 
     if (diff > ONE_HOUR) {
-      localStorage.removeItem('user')
-      localStorage.removeItem('loginTime')
+      clearSession()
       location.reload()
+      return
     }
   }
+
+  if (user?.username) {
+    try {
+      const updatedSession = await buildSessionFromAccess(user)
+
+      if (updatedSession) {
+        saveSession(updatedSession)
+        isLogged.value = true
+        isDepartmentHead.value = isCurrentUserDepartmentHead()
+
+        if (isDepartmentHead.value && active.value === 'documentos') {
+          active.value = 'panel'
+        }
+      } else {
+        clearSession()
+      }
+    } catch (error) {
+      clearSession()
+    }
+  }
+
+  checkingSession.value = false
 })
 
 function handleLogin() {

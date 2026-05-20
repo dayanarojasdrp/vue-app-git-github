@@ -1,7 +1,7 @@
 <template>
-<div v-if="modelValue" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50">
+<div v-if="modelValue" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-[10000]">
 
-    <div class="bg-white w-[420px] rounded-2xl p-6 shadow-2xl border border-slate-200">
+    <div class="relative bg-white w-[420px] rounded-2xl p-6 shadow-2xl border border-slate-200">
 
       <div class="flex items-center justify-between mb-6">
 
@@ -252,7 +252,7 @@ import { nextTick } from 'vue'
 import { ref, computed, watch } from 'vue'
 import { successAlert, errorAlert } from '../utiles/alerts'
 import api from '../api/axios'
-import { getCurrentUserFacultyId } from '../utiles/vicedecanos'
+import { getCurrentUserAccess, getCurrentUserFacultyId, isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
 import {
   MagnifyingGlassIcon,
   UserIcon,
@@ -302,8 +302,13 @@ watch(() => props.modelValue, (val) => {
 })
 function selectEstudiante(est) {
   estudianteSeleccionado.value = est
-  cargarDepartamentos()
-  step.value = 2
+
+  if (isCurrentUserDepartmentHead()) {
+    cargarDepartamentoDelJefe()
+  } else {
+    cargarDepartamentos()
+    step.value = 2
+  }
 }
 async function cargarDepartamentos() {
   try {
@@ -323,6 +328,20 @@ async function cargarDepartamentos() {
   console.error(error)
   errorAlert('No se pudieron cargar los departamentos')
 }
+}
+
+async function cargarDepartamentoDelJefe() {
+  const access = getCurrentUserAccess()
+
+  if (!access?.departmentId) {
+    errorAlert('No hay un departamento asociado al jefe de departamento actual')
+    return
+  }
+
+  await selectDepartamento({
+    id: access.departmentId,
+    nombre: access.departmentName,
+  })
 }
 
 async function selectDepartamento(dep) {

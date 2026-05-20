@@ -200,7 +200,7 @@
   </div>
 
   <!-- 🔴 ACCIONES FIJAS ABAJO (SIN DOBLE DIV) -->
-   <div class="fixed bottom-6 right-6 z-50">
+   <div v-if="!isDepartmentHead" class="fixed bottom-6 right-6 z-50">
   <button
   @click="showResolucionModal = true"
   class="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition"
@@ -258,7 +258,9 @@ const confirmModal = ref({
   action: null
 })
 import { onUnmounted } from 'vue'
-import { filterStudentItemsByCurrentFaculty, filterStudentsByCurrentFaculty } from '../utiles/facultadScope'
+import { filterStudentItemsByCurrentDepartment, filterStudentItemsByCurrentFaculty, filterStudentsByCurrentDepartment, filterStudentsByCurrentFaculty } from '../utiles/facultadScope'
+import { isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
+const isDepartmentHead = isCurrentUserDepartmentHead()
 // =======================
 // 🔹 LOADERS
 // =======================
@@ -266,7 +268,9 @@ async function loadEstudiantes() {
   try {
     const res = await api.get('/estudiante')
     const data = res.data.data ?? res.data
-    estudiantes.value = await filterStudentsByCurrentFaculty(data)
+    estudiantes.value = isCurrentUserDepartmentHead()
+      ? await filterStudentsByCurrentDepartment(data)
+      : await filterStudentsByCurrentFaculty(data)
   } catch (error) {
     console.error(error)
     showToast('Error cargando estudiantes', 'error')
@@ -277,7 +281,11 @@ async function loadAA() {
   try {
     const res = await api.get('/alumno-ayudante/activos')
     const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
-    aaList.value = deduplicateAA(filteredAA)
+    aaList.value = deduplicateAA(
+      isCurrentUserDepartmentHead()
+        ? await filterStudentItemsByCurrentDepartment(res.data)
+        : filteredAA
+    )
   } catch (error) {
     console.error(error)
     showToast('Error cargando AA', 'error')

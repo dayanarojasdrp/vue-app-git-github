@@ -278,18 +278,16 @@
 import { ref } from 'vue'
 import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
 import api from '../api/axios'
-import { getUsers, validateUser } from '../api/users'
+import { validateUser } from '../api/users'
 import {
-  assignSystemAdmin,
-  assignViceDean,
-  canAccessApp,
-  findViceDeanByFaculty,
-  getSystemAdminUsername,
+  assignAccess,
   getUserAccess,
-  getUserFaculty,
-  getViceDeanAssignments,
-  isSystemAdmin
-} from '../utiles/vicedecanos'
+  hasAdminAccess,
+  listFacultyAccess,
+  transferAdmin,
+} from '../api/access'
+import { saveSession } from '../utiles/auth'
+import { buildSessionFromAccess } from '../utiles/sessionAccess'
 
 const username = ref('')
 const password = ref('')
@@ -307,11 +305,11 @@ const faculties = ref([])
 const selectedFacultyId = ref('')
 const newViceUsername = ref('')
 const savingViceDean = ref(false)
-const viceDeanAssignments = ref(getViceDeanAssignments())
+const viceDeanAssignments = ref([])
 const configTab = ref('vicedecano')
 const newAdminUsername = ref('')
 const savingAdmin = ref(false)
-const currentAdminUsername = ref(getSystemAdminUsername())
+const currentAdminUsername = ref('')
 const confirmDialog = ref({
   show: false,
   title: '',
@@ -347,25 +345,15 @@ async function login() {
       return
     }
 
-    if (!canAccessApp(result.user.username)) {
+    const session = await buildSessionFromAccess(result.user)
+
+    if (!session) {
       message.value = 'Este usuario no tiene acceso a la página'
       messageType.value = 'error'
       return
     }
 
-    const access = getUserAccess(result.user.username)
-    const faculty = getUserFaculty(result.user.username)
-
-    localStorage.setItem('user', JSON.stringify({
-      name: result.user.name,
-      username: result.user.username,
-      role: access?.role ?? 'sin_rol',
-      facultyId: faculty?.facultyId ?? null,
-      facultyName: faculty?.facultyName ?? null,
-      facultyAbbreviation: faculty?.facultyAbbreviation ?? null
-    }))
-
-    localStorage.setItem('loginTime', Date.now())
+    saveSession(session)
 
     location.reload()
   } catch (error) {
@@ -384,7 +372,7 @@ function openAdminAuth() {
   adminMessage.value = ''
   adminMessageType.value = ''
   configTab.value = 'vicedecano'
-  currentAdminUsername.value = getSystemAdminUsername()
+  currentAdminUsername.value = ''
 }
 
 function closeAdminModal() {
@@ -401,12 +389,6 @@ async function authenticateAdmin() {
     return
   }
 
-  if (!isSystemAdmin(userName)) {
-    adminMessage.value = `Solo ${getSystemAdminUsername()} puede entrar a esta configuración`
-    adminMessageType.value = 'error'
-    return
-  }
-
   adminLoading.value = true
   adminMessage.value = ''
 
@@ -419,10 +401,19 @@ async function authenticateAdmin() {
       return
     }
 
+    const accessResult = await getUserAccess(userName)
+
+    if (!hasAdminAccess(accessResult.access)) {
+      adminMessage.value = 'Este usuario no tiene permiso de administrador'
+      adminMessageType.value = 'error'
+      return
+    }
+
     adminAuthenticated.value = true
     adminMessage.value = ''
-    currentAdminUsername.value = getSystemAdminUsername()
+    currentAdminUsername.value = userName
     await loadFaculties()
+    await loadViceDeanAssignments()
   } catch (error) {
     adminMessage.value = 'No se pudo validar el administrador'
     adminMessageType.value = 'error'
@@ -442,6 +433,24 @@ async function loadFaculties() {
   }
 }
 
+async function loadViceDeanAssignments() {
+  const accessLists = await Promise.all(
+    faculties.value.map(async faculty => {
+      const access = await listFacultyAccess(faculty.id)
+      return access
+        .filter(item => item.role === 'vicedecano_docente')
+        .map(item => ({
+          ...item,
+          facultyId: faculty.id,
+          facultyName: faculty.nombre,
+          facultyAbbreviation: faculty.abreviatura,
+        }))
+    })
+  )
+
+  viceDeanAssignments.value = accessLists.flat()
+}
+
 async function saveViceDean() {
   const userName = newViceUsername.value.trim()
   const faculty = faculties.value.find(item => String(item.id) === String(selectedFacultyId.value))
@@ -456,16 +465,8 @@ async function saveViceDean() {
   adminMessage.value = ''
 
   try {
-    const users = await getUsers()
-    const userExists = users.some(user => user.username === userName)
-
-    if (!userExists) {
-      adminMessage.value = 'Ese usuario no existe en la API'
-      adminMessageType.value = 'error'
-      return
-    }
-
-    const currentViceDean = findViceDeanByFaculty(faculty.id)
+    const facultyAccess = await listFacultyAccess(faculty.id)
+    const currentViceDean = facultyAccess.find(item => item.role === 'vicedecano_docente')
 
     if (currentViceDean && currentViceDean.username !== userName) {
       const confirmed = await showConfirm({
@@ -476,14 +477,19 @@ async function saveViceDean() {
       if (!confirmed) return
     }
 
-    assignViceDean({ username: userName, faculty })
-    viceDeanAssignments.value = getViceDeanAssignments()
+    await assignAccess({
+      username: userName,
+      role: 'vicedecano_docente',
+      facultyId: faculty.id,
+      departmentId: null,
+    })
+    await loadViceDeanAssignments()
     newViceUsername.value = ''
     selectedFacultyId.value = ''
     adminMessage.value = 'Acceso actualizado correctamente'
     adminMessageType.value = 'success'
   } catch (error) {
-    adminMessage.value = 'No se pudo guardar el acceso'
+    adminMessage.value = accessErrorMessage(error, 'No se pudo guardar el acceso')
     adminMessageType.value = 'error'
   } finally {
     savingViceDean.value = false
@@ -499,7 +505,7 @@ async function saveSystemAdmin() {
     return
   }
 
-  if (isSystemAdmin(userName)) {
+  if (userName === currentAdminUsername.value) {
     adminMessage.value = 'Ese usuario ya es el administrador actual'
     adminMessageType.value = 'error'
     return
@@ -509,24 +515,15 @@ async function saveSystemAdmin() {
   adminMessage.value = ''
 
   try {
-    const users = await getUsers()
-    const userExists = users.some(user => user.username === userName)
-
-    if (!userExists) {
-      adminMessage.value = 'Ese usuario no existe en la API'
-      adminMessageType.value = 'error'
-      return
-    }
-
     const confirmed = await showConfirm({
       title: 'Cambiar administrador',
-      message: `Vas a darle permiso de administrador a ${userName}.\n\nCuando aceptes, ${getSystemAdminUsername()} dejará de poder entrar a esta configuración.`
+      message: `Vas a darle permiso de administrador a ${userName}.\n\nCuando aceptes, ${currentAdminUsername.value} dejará de poder entrar a esta configuración.`
     })
 
     if (!confirmed) return
 
-    assignSystemAdmin(userName)
-    currentAdminUsername.value = getSystemAdminUsername()
+    await transferAdmin(userName)
+    currentAdminUsername.value = userName
     newAdminUsername.value = ''
     adminMessage.value = `${userName} ahora es el administrador del sistema`
     adminMessageType.value = 'success'
@@ -535,11 +532,19 @@ async function saveSystemAdmin() {
       closeAdminModal()
     }, 900)
   } catch (error) {
-    adminMessage.value = 'No se pudo guardar el administrador'
+    adminMessage.value = accessErrorMessage(error, 'No se pudo guardar el administrador')
     adminMessageType.value = 'error'
   } finally {
     savingAdmin.value = false
   }
+}
+
+function accessErrorMessage(error, fallback) {
+  if (error?.response?.status === 422) {
+    return error.response.data?.message || 'Ese usuario no existe en la API'
+  }
+
+  return error?.response?.data?.message || fallback
 }
 
 function showConfirm({ title, message }) {
