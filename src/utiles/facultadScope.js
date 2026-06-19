@@ -3,6 +3,7 @@ import { getCurrentUserAccess, getCurrentUserFacultyId } from './vicedecanos'
 
 let cachedScope = null
 
+// Visual fallback only. The backend must enforce faculty/department access.
 function normalizeText(value) {
   return String(value ?? '')
     .normalize('NFD')

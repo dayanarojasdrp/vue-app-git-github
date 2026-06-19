@@ -123,13 +123,31 @@
   @aa-creado="loadAA"
   :aa-list="aaList"
 />
- <p class="text-xs text-slate-400">
-          Lista de AAs
-          </p>
+      <div class="flex items-center gap-5 mt-3 mb-2 border-b border-slate-100">
+        <button
+          class="pb-2 text-xs font-medium transition border-b-2"
+          :class="activeAaView === 'lista'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-slate-400 hover:text-slate-600'"
+          @click="activeAaView = 'lista'"
+        >
+          Lista
+        </button>
+
+        <button
+          class="pb-2 text-xs font-medium transition border-b-2"
+          :class="activeAaView === 'historial'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-slate-400 hover:text-slate-600'"
+          @click="activeAaView = 'historial'"
+        >
+          Historial
+        </button>
+      </div>
 
 
       <!-- 🔥 LISTA CON SCROLL (AQUÍ VA EL SCROLL BIEN HECHO) -->
-      <div class="flex-1 overflow-y-auto border rounded-xl p-2">
+      <div v-if="activeAaView === 'lista'" class="flex-1 overflow-y-auto border rounded-xl p-2">
 
         <p v-if="aaList.length === 0" class="text-xs text-slate-400">
           No hay AA vigentes
@@ -195,6 +213,54 @@
         </ul>
       </div>
 
+      <div v-else class="flex-1 overflow-y-auto border rounded-xl p-2 bg-slate-50">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-xs font-semibold text-slate-700">
+              AA por cursos
+            </h2>
+            <p class="text-[11px] text-slate-400 leading-tight">
+              Historial de alumnos ayudantes activos agrupado por curso
+            </p>
+          </div>
+        </div>
+
+        <p v-if="aaPorCurso.length === 0" class="text-xs text-slate-400">
+          No hay alumnos ayudantes asociados a cursos anteriores
+        </p>
+
+        <div v-else class="space-y-2 pr-1">
+          <section
+            v-for="grupo in aaPorCurso"
+            :key="grupo.key"
+            class="bg-white border rounded-lg px-3 py-2"
+          >
+            <div class="flex items-center justify-between mb-1.5">
+              <h3 class="text-xs font-semibold text-slate-700">
+                Curso {{ grupo.curso }}
+              </h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                {{ grupo.items.length }} AA
+              </span>
+            </div>
+
+            <ul class="space-y-1.5">
+              <li
+                v-for="aa in grupo.items"
+                :key="getAAHistoryKey(aa)"
+                class="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-2.5 py-1.5"
+              >
+                <div>
+                  <p class="text-xs font-medium text-slate-700 leading-tight">
+                    {{ aa.nombre_completo || `${aa.nombre || ''} ${aa.apellidos || ''}` }}
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -229,6 +295,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import api from '../api/axios'
+import { withScopeBody, withScopeParams } from '../api/scope'
 import DesignarModalA from './DesignarModalA.vue'
 import ResolucionModal from './ResolucionModal.vue'
 
@@ -237,9 +304,11 @@ import ResolucionModal from './ResolucionModal.vue'
 // =======================
 const searchAA = ref('')
 const searchOpenAA = ref(false)
+const activeAaView = ref('lista')
 
 const estudiantes = ref([])
 const aaList = ref([])
+const aaHistoryList = ref([])
 
 const showModal = ref(false)
 const showResolucionModal = ref(false)
@@ -266,7 +335,9 @@ const isDepartmentHead = isCurrentUserDepartmentHead()
 // =======================
 async function loadEstudiantes() {
   try {
-    const res = await api.get('/estudiante')
+    const res = await api.get('/estudiante', {
+      params: withScopeParams()
+    })
     const data = res.data.data ?? res.data
     estudiantes.value = isCurrentUserDepartmentHead()
       ? await filterStudentsByCurrentDepartment(data)
@@ -279,24 +350,79 @@ async function loadEstudiantes() {
 
 async function loadAA() {
   try {
-    const res = await api.get('/alumno-ayudante/activos')
-    const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
-    aaList.value = deduplicateAA(
-      isCurrentUserDepartmentHead()
-        ? await filterStudentItemsByCurrentDepartment(res.data)
-        : filteredAA
-    )
+    const res = await api.get('/alumno-ayudante/activos', {
+      params: withScopeParams()
+    })
+    const data = Array.isArray(res.data) ? res.data : res.data?.data ?? []
+
+    let scopedAA = data
+
+    try {
+      scopedAA = isCurrentUserDepartmentHead()
+        ? await filterStudentItemsByCurrentDepartment(data)
+        : await filterStudentItemsByCurrentFaculty(data)
+    } catch (filterError) {
+      console.warn('No se pudo aplicar el filtro local de AA. Se usa la respuesta del backend.', filterError)
+    }
+
+    aaList.value = deduplicateAA(scopedAA)
+    await loadAAHistory()
   } catch (error) {
-    console.error(error)
-    showToast('Error cargando AA', 'error')
+    console.error('Error cargando AA:', error.response || error)
+    showToast(
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      `Error cargando AA${error.response?.status ? ` (${error.response.status})` : ''}`,
+      'error'
+    )
   }
+}
+
+async function loadAAHistory() {
+  const urls = [
+    '/alumno-ayudante/historial',
+    '/alumno-ayudante/historico',
+    '/alumno-ayudante/todos',
+    '/alumno-ayudante/all',
+    '/alumno-ayudante'
+  ]
+
+  for (const url of urls) {
+    try {
+      const res = await api.get(url, {
+        params: withScopeParams()
+      })
+      const data = Array.isArray(res.data) ? res.data : res.data?.data ?? []
+      let scopedAA = data
+
+      try {
+        scopedAA = isCurrentUserDepartmentHead()
+          ? await filterStudentItemsByCurrentDepartment(data)
+          : await filterStudentItemsByCurrentFaculty(data)
+      } catch (filterError) {
+        console.warn('No se pudo aplicar el filtro local de historial AA. Se usa la respuesta del backend.', filterError)
+      }
+
+      aaHistoryList.value = deduplicateAA(scopedAA)
+      return
+    } catch (error) {
+      if (![404, 405].includes(error.response?.status)) {
+        console.warn('No se pudo cargar historial AA', error.response || error)
+        break
+      }
+    }
+  }
+
+  aaHistoryList.value = aaList.value
 }
 
 function getAAUniqueKey(aa) {
   return [
     normalizarTexto(aa.nombre_completo || `${aa.nombre || ''} ${aa.apellidos || ''}`),
     normalizarTexto(aa.tutor || aa.nombre_tutor || ''),
-    String(aa.etapa ?? '').trim()
+    String(aa.etapa ?? '').trim(),
+    String(aa.id_curso ?? aa.curso ?? '').trim(),
+    String(aa.accion ?? aa.estado ?? '').trim()
   ].join('|')
 }
 
@@ -330,7 +456,7 @@ async function confirmRatify(aa) {
     `¿Desea ratificar a ${aa.nombre} ${aa.apellidos}?`,
     async () => {
       try {
-        await api.post(`/alumno-ayudante/ratificar/${aa.id}`)
+        await api.post(`/alumno-ayudante/ratificar/${aa.id}`, withScopeBody())
         showToast('AA ratificado correctamente', 'success')
         await loadAA()
       } catch (error) {
@@ -350,7 +476,7 @@ async function confirmRemove(aa) {
     `¿Desnombrar a ${aa.nombre} ${aa.apellidos} como AA?`,
     async () => {
       try {
-        await api.post(`/alumno-ayudante/desnombrar/${aa.id}`)
+        await api.post(`/alumno-ayudante/desnombrar/${aa.id}`, withScopeBody())
         showToast('AA desnombrado correctamente', 'warning')
         await loadAA()
       } catch (error) {
@@ -420,10 +546,56 @@ const aaFiltrados = computed(() => {
 
   return aaList.value.filter(aa => {
     const nombreCompleto = normalizarTexto(
-      `${aa.nombre || ''} ${aa.apellidos || ''}`
+      aa.nombre_completo || `${aa.nombre || ''} ${aa.apellidos || ''}`
     )
     return nombreCompleto.includes(busqueda)
   })
+})
+
+function getCursoLabel(item) {
+  return item?.curso || item?.curso_nombre || item?.periodo || 'Sin curso'
+}
+
+function getCursoOrder(item) {
+  const curso = getCursoLabel(item)
+  const match = String(curso).match(/\d{4}/)
+  return match ? Number(match[0]) : Number(item?.id_curso || 0)
+}
+
+function getAAHistoryKey(aa) {
+  return [
+    aa.id,
+    aa.id_estudiante,
+    aa.numero_carnet,
+    aa.id_curso,
+    getCursoLabel(aa),
+    aa.accion || aa.estado || ''
+  ].join('-')
+}
+
+const aaPorCurso = computed(() => {
+  const grupos = new Map()
+
+  aaHistoryList.value.forEach(aa => {
+    if (!aa.id_curso && !aa.curso && !aa.curso_nombre && !aa.periodo) return
+
+    const curso = getCursoLabel(aa)
+    const key = String(aa.id_curso ?? curso)
+
+    if (!grupos.has(key)) {
+      grupos.set(key, {
+        key,
+        curso,
+        order: getCursoOrder(aa),
+        items: []
+      })
+    }
+
+    grupos.get(key).items.push(aa)
+  })
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.order - a.order || String(b.curso).localeCompare(String(a.curso)))
 })
 
 function toggleSearchAA() {
@@ -436,14 +608,6 @@ function toggleSearchAA() {
   } else {
     searchAA.value = ''
   }
-}
-
-// =======================
-// 🔹 EXPORT / RESOLUCIÓN
-// =======================
-function exportarEstudiante() {
-  // si usas modal de export
-  console.log('Exportar AA')
 }
 
 // =======================

@@ -181,8 +181,61 @@
 
 </div>
 
-   <!-- STEP 4: ETAPA -->
+   <!-- STEP 4: ASIGNATURA -->
 <div v-show="step === 4">
+
+  <h3 class="text-sm font-semibold text-slate-700 mb-4">
+    Seleccionar Asignatura
+  </h3>
+
+  <div class="relative flex items-center mb-3">
+    <input
+      v-model="searchAsignatura"
+      type="text"
+      placeholder="Buscar asignatura..."
+      class="w-full bg-slate-100 border border-slate-200 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-1.5"
+    />
+  </div>
+
+  <div class="max-h-[260px] overflow-y-auto scroll-custom">
+    <div
+      v-for="asignatura in asignaturasFiltradas"
+      :key="asignatura.id"
+      class="flex items-center justify-between bg-white border hover:border-blue-400 hover:shadow rounded-xl px-4 py-3 mb-2"
+    >
+      <div class="flex items-center gap-3">
+        <div class="bg-indigo-100 p-2 rounded-full">
+          <BookOpenIcon class="w-5 h-5 text-indigo-600" />
+        </div>
+
+        <div>
+          <p class="text-sm text-slate-700 font-medium">
+            {{ getAsignaturaNombre(asignatura) }}
+          </p>
+          <p v-if="asignatura.codigo" class="text-xs text-slate-400">
+            {{ asignatura.codigo }}
+          </p>
+        </div>
+      </div>
+
+      <button
+        @click="selectAsignatura(asignatura)"
+        class="px-3 py-1 text-sm bg-blue-500 text-white rounded-full"
+      >
+        Elegir
+      </button>
+    </div>
+
+    <p v-if="asignaturasFiltradas.length === 0"
+       class="text-xs text-slate-400 text-center py-3">
+      No hay asignaturas disponibles
+    </p>
+  </div>
+
+</div>
+
+   <!-- STEP 5: ETAPA -->
+<div v-show="step === 5">
 
   <h3 class="text-sm font-semibold text-slate-700 mb-4">
     Seleccionar Etapa
@@ -252,6 +305,7 @@ import { nextTick } from 'vue'
 import { ref, computed, watch } from 'vue'
 import { successAlert, errorAlert } from '../utiles/alerts'
 import api from '../api/axios'
+import { withScopeBody } from '../api/scope'
 import { getCurrentUserAccess, getCurrentUserFacultyId, isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
 import {
   MagnifyingGlassIcon,
@@ -259,7 +313,8 @@ import {
   ArrowLeftIcon,
   AcademicCapIcon,
   XMarkIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  BookOpenIcon
 } from '@heroicons/vue/24/outline'
 const props = defineProps({
   modelValue: Boolean,
@@ -273,10 +328,12 @@ const step = ref(1)
 const estudianteSeleccionado = ref(null)
 const departamentoSeleccionado = ref(null)
 const profesorSeleccionado = ref(null)
+const asignaturaSeleccionada = ref(null)
 const etapaSeleccionada = ref(null)
 
 const departamentos = ref([])
 const profesores = ref([])
+const asignaturas = ref([])
 const search = ref('')
 const searchOpen = ref(false)
 const searchInput = ref(null)
@@ -297,7 +354,10 @@ watch(() => props.modelValue, (val) => {
     estudianteSeleccionado.value = null
     departamentoSeleccionado.value = null
     profesorSeleccionado.value = null
+    asignaturaSeleccionada.value = null
     etapaSeleccionada.value = null
+    asignaturas.value = []
+    searchAsignatura.value = ''
   }
 })
 function selectEstudiante(est) {
@@ -321,8 +381,6 @@ async function cargarDepartamentos() {
 
     const res = await api.get(`/facultad/${facultyId}/departamentos`)
 
-    console.log('DEPARTAMENTOS:', res.data) // 👈 DEBUG
-
     departamentos.value = res.data
   } catch (error) {
   console.error(error)
@@ -332,15 +390,20 @@ async function cargarDepartamentos() {
 
 async function cargarDepartamentoDelJefe() {
   const access = getCurrentUserAccess()
+  const facultyId = getCurrentUserFacultyId()
 
-  if (!access?.departmentId) {
+  if (!access?.departmentId || !facultyId) {
     errorAlert('No hay un departamento asociado al jefe de departamento actual')
     return
   }
 
+  const response = await api.get(`/facultad/${facultyId}/departamentos`)
+  const departments = Array.isArray(response.data) ? response.data : response.data?.data ?? []
+  const matchedDepartment = departments.find(dep => String(dep.id) === String(access.departmentId))
+
   await selectDepartamento({
     id: access.departmentId,
-    nombre: access.departmentName,
+    nombre: matchedDepartment?.nombre ?? access.departmentName ?? 'Departamento actual',
   })
 }
 
@@ -355,7 +418,45 @@ async function selectDepartamento(dep) {
 }
 function selectProfesor(prof) {
   profesorSeleccionado.value = prof
-  step.value = 4
+  cargarAsignaturas()
+}
+
+async function cargarAsignaturas() {
+  try {
+    const facultyId = getCurrentUserFacultyId()
+
+    if (!facultyId) {
+      errorAlert('No hay una facultad asociada al usuario actual')
+      return
+    }
+
+    let data = []
+
+    try {
+      const res = await api.get(`/facultad/${facultyId}/asignaturas`)
+      data = Array.isArray(res.data) ? res.data : res.data?.data ?? []
+    } catch (error) {
+      if (![404, 405].includes(error.response?.status)) throw error
+
+      const res = await api.get('/asignaturas')
+      const all = Array.isArray(res.data) ? res.data : res.data?.data ?? []
+      data = all.filter(asignatura => {
+        const asignaturaFacultyId = asignatura.facultad_id ?? asignatura.id_facultad ?? asignatura.facultyId
+        return asignaturaFacultyId && String(asignaturaFacultyId) === String(facultyId)
+      })
+    }
+
+    asignaturas.value = data
+    step.value = 4
+  } catch (error) {
+    console.error('Error cargando asignaturas', error.response || error)
+    errorAlert('No se pudieron cargar las asignaturas de la facultad')
+  }
+}
+
+function selectAsignatura(asignatura) {
+  asignaturaSeleccionada.value = asignatura
+  step.value = 5
 }
 function selectEtapa(etapa) {
   etapaSeleccionada.value = etapa
@@ -363,17 +464,13 @@ function selectEtapa(etapa) {
 }
 async function crearAA() {
   try {
-    console.log('CREANDO AA:', {
-      estudiante: estudianteSeleccionado.value,
-      profesor: profesorSeleccionado.value,
-      etapa: String(etapaSeleccionada.value)
-    })
-
-    await api.post('/alumno-ayudante/designar', {
+    await api.post('/alumno-ayudante/designar', withScopeBody({
       id_estudiante: estudianteSeleccionado.value?.id,
       nombre_tutor: `${profesorSeleccionado.value?.nombre} ${profesorSeleccionado.value?.apellidos}`,
+      id_asignatura: asignaturaSeleccionada.value?.id,
+      asignatura: getAsignaturaNombre(asignaturaSeleccionada.value),
       etapa: String(etapaSeleccionada.value)
-    })
+    }))
    successAlert(
   `Alumno ayudante asignado correctamente`
 )
@@ -397,6 +494,7 @@ function volverPaso() {
 }
 const searchProf = ref('')
 const searchOpenProf = ref(false)
+const searchAsignatura = ref('')
 
 const profesoresFiltrados = computed(() => {
   if (!searchProf.value) return profesores.value
@@ -410,6 +508,23 @@ const profesoresFiltrados = computed(() => {
 function toggleSearchProf() {
   searchOpenProf.value = !searchOpenProf.value
 }
+
+function getAsignaturaNombre(asignatura = {}) {
+  return asignatura.nombre ?? asignatura.asignatura ?? asignatura.nombre_asignatura ?? asignatura.descripcion ?? ''
+}
+
+const asignaturasFiltradas = computed(() => {
+  if (!searchAsignatura.value) return asignaturas.value
+
+  const busqueda = searchAsignatura.value.toLowerCase()
+
+  return asignaturas.value.filter(asignatura =>
+    `${getAsignaturaNombre(asignatura)} ${asignatura.codigo ?? ''}`
+      .toLowerCase()
+      .includes(busqueda)
+  )
+})
+
 async function toggleSearch() {
   searchOpen.value = !searchOpen.value
 

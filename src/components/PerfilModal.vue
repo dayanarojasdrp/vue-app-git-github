@@ -11,7 +11,7 @@
           </div>
 
           <div>
-            <p class="text-sm font-semibold text-slate-800">{{ user?.name }}</p>
+            <p class="text-sm font-semibold text-slate-800">{{ displayName }}</p>
             <p class="text-xs text-blue-500">{{ user?.role }}</p>
           </div>
         </div>
@@ -67,6 +67,8 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import api from '../api/axios'
+import { withScopeParams } from '../api/scope'
+import { getUser } from '../utiles/auth'
 import { watch } from 'vue'
 const props = defineProps({
   show: Boolean
@@ -79,13 +81,13 @@ const logs = ref([])
 
 watch(() => props.show, async (nuevoValor) => {
   if (nuevoValor) {
-    user.value = JSON.parse(localStorage.getItem('user'))
+    user.value = getUser()
 
     try {
       const res = await api.get('/logs', {
-      params: {
-  usuario: user.value?.username // 🔥 ESTE
-}
+        params: withScopeParams({
+          usuario: user.value?.username
+        })
       })
 
       logs.value = res.data
@@ -96,8 +98,10 @@ watch(() => props.show, async (nuevoValor) => {
 })
 
 const userInitial = computed(() => {
-  return user.value?.name?.charAt(0).toUpperCase() || '?'
+  return displayName.value?.charAt(0).toUpperCase() || '?'
 })
+
+const displayName = computed(() => user.value?.name ?? user.value?.username ?? 'Usuario')
 function formatearFecha(fecha) {
   return new Date(fecha).toLocaleString()
 }

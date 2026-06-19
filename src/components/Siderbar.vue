@@ -47,6 +47,11 @@
   Documentos
 </button>
 
+      <button v-if="canViewResolucion" class="link" :class="{ active: active === 'resolucion' }" @click="$emit('change', 'resolucion')">
+  <DocumentCheckIcon class="w-5 h-5 mr-3" />
+  Resolución
+</button>
+
     </nav>
 <div v-if="canOpenConfig" class="px-3 pb-2">
  <button
@@ -79,7 +84,7 @@
     <!-- Info -->
     <div class="flex-1">
       <p :class="showMenu ? 'text-white text-sm font-semibold' : 'text-slate-800 text-sm font-semibold'">
-        {{ user?.name }}
+        {{ displayName }}
       </p>
       <p :class="showMenu ? 'text-blue-100 text-xs' : 'text-slate-400 text-xs'">
         {{ user?.role }}
@@ -97,7 +102,7 @@
   >
     
     <div class="mb-3">
-  <p class="font-semibold text-slate-800">{{ user?.name }}</p>
+  <p class="font-semibold text-slate-800">{{ displayName }}</p>
   <p class="text-xs text-blue-500 font-medium">{{ user?.role }}</p>
 </div>
 
@@ -189,7 +194,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
 import PerfilModal from './PerfilModal.vue'
-import { getUser } from '../utiles/auth'
+import { clearSession, getUser } from '../utiles/auth'
 const showPerfil = ref(false)
 const menuRef = ref(null)
 const user = ref(null)
@@ -212,10 +217,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 const userInitial = computed(() => {
-  return user.value?.name
-    ? user.value.name.charAt(0).toUpperCase()
+  return displayName.value
+    ? displayName.value.charAt(0).toUpperCase()
     : '?'
 })
+
+const displayName = computed(() => user.value?.name ?? user.value?.username ?? 'Usuario')
 
 const canOpenConfig = computed(() => {
   return ['vicedecano_docente', 'decano'].includes(user.value?.role)
@@ -225,19 +232,23 @@ const canViewDocuments = computed(() => {
   return user.value?.role !== 'jefe_departamento'
 })
 
+const canViewResolucion = computed(() => {
+  return ['vicedecano_docente', 'decano'].includes(user.value?.role)
+})
+
 function toggleMenu() {
   showMenu.value = !showMenu.value
 }
 
 function logout() {
-  localStorage.removeItem('user')
-  localStorage.removeItem('loginTime')
+  clearSession()
   location.reload()
 }
 import {
   Squares2X2Icon,
   UserGroupIcon,
   AcademicCapIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  DocumentCheckIcon
 } from '@heroicons/vue/24/outline'
 </script>

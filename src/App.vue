@@ -20,6 +20,7 @@
       <!-- HEADER -->
 <HeaderBar 
   @exportar="handleExport"
+  :title="headerTitle"
   :mostrarExportar="active === 'profesores' || active === 'estudiantes'"
 />
 
@@ -36,6 +37,7 @@
   <Profesores v-if="active === 'profesores'" :key="'profesores'" />
 <Estudiantes v-if="active === 'estudiantes'" :key="'estudiantes'" />
 <Documentos v-if="active === 'documentos' && !isDepartmentHead" :key="'documentos'" />
+<Resoluciones v-if="active === 'resolucion' && canViewResolucion" :key="'resolucion'" />
 <Usuarios v-if="active === 'usuarios'" :key="'usuarios'" />
 </main>
 
@@ -49,13 +51,14 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue' 
+import { computed, ref, watch, onMounted } from 'vue' 
 
 import Siderbar from './components/Siderbar.vue'
 import Panel from './components/Panel.vue'
 import Profesores from './components/Profesores.vue'
 import Estudiantes from './components/Estudiantes.vue'
 import Documentos from './components/Documentos.vue'
+import Resoluciones from './components/Resoluciones.vue'
 import Login from './components/Login.vue'
 import Usuarios from './components/Usuarios.vue'
 import HeaderBar from './components/HeaderBar.vue'
@@ -77,6 +80,22 @@ const isLogged = ref(false)
 const exportTipo = ref(null)
 const isDepartmentHead = ref(false)
 const checkingSession = ref(true)
+const currentUser = ref(null)
+const canViewResolucion = computed(() => {
+  return ['vicedecano_docente', 'decano'].includes(currentUser.value?.role)
+})
+const headerTitle = computed(() => {
+  const titles = {
+    panel: 'PPA y AA',
+    profesores: 'Profesores',
+    estudiantes: 'Estudiantes',
+    documentos: 'Documentos',
+    resolucion: 'Resolución',
+    usuarios: 'Usuarios'
+  }
+
+  return titles[active.value] ?? 'PPA y AA'
+})
 watch(active, (value) => {
   if (value === 'panel') {
     panelKey.value++
@@ -85,6 +104,7 @@ watch(active, (value) => {
 
 onMounted(async () => {
   const user = getUser()
+  currentUser.value = user
   const loginTime = localStorage.getItem('loginTime')
 
   if (loginTime) {
@@ -104,10 +124,14 @@ onMounted(async () => {
 
       if (updatedSession) {
         saveSession(updatedSession)
+        currentUser.value = updatedSession
         isLogged.value = true
         isDepartmentHead.value = isCurrentUserDepartmentHead()
 
-        if (isDepartmentHead.value && active.value === 'documentos') {
+        if (
+          (isDepartmentHead.value && active.value === 'documentos') ||
+          (!['vicedecano_docente', 'decano'].includes(updatedSession.role) && active.value === 'resolucion')
+        ) {
           active.value = 'panel'
         }
       } else {
@@ -122,6 +146,8 @@ onMounted(async () => {
 })
 
 function handleLogin() {
+  currentUser.value = getUser()
+  isDepartmentHead.value = isCurrentUserDepartmentHead()
   isLogged.value = true
 }
 function handleExport() {

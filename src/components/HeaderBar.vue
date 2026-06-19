@@ -4,7 +4,7 @@
     <!-- IZQUIERDA -->
     <div class="leading-tight">
       <h1 class="text-sm font-semibold text-slate-800">
-        PPA y AA
+        {{ title || 'PPA y AA' }}
       </h1><br/>
 
       <!-- SLOT (para tabs tipo PPA / AA si quieres) -->

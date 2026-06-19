@@ -45,6 +45,12 @@
 
 <script setup>
 import api from '../api/axios'
+import { withScopeParams } from '../api/scope'
+import {
+  hasValidDocumentResponse,
+  isNoDocumentInfoError,
+  notifyNoDocumentInfo
+} from '../utiles/documentos'
 
 const props = defineProps({
   show: Boolean,
@@ -62,21 +68,32 @@ const url = tipo === 'pdf'
   : `/export/${base}/word`
 
     const res = await api.get(url, {
-      responseType: 'blob'
+      responseType: 'blob',
+      params: withScopeParams()
     })
 
+    if (!(await hasValidDocumentResponse(res))) {
+      notifyNoDocumentInfo()
+      return
+    }
+
     const blob = new Blob([res.data])
+    const fileURL = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = window.URL.createObjectURL(blob)
-   link.download = tipo === 'pdf'
-  ? `${base}.pdf`
-  : `${base}.docx`
+    link.href = fileURL
+    link.download = tipo === 'pdf'
+      ? `${base}.pdf`
+      : `${base}.docx`
     link.click()
+    window.URL.revokeObjectURL(fileURL)
 
     emit('close')
 
   } catch (error) {
     console.error('Error exportando', error)
+    if (isNoDocumentInfoError(error)) {
+      notifyNoDocumentInfo()
+    }
   }
 }
 </script>

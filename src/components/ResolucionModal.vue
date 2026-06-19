@@ -48,45 +48,69 @@
 
 <script setup>
 import api from '../api/axios'
+import { withScopeParams } from '../api/scope'
+import {
+  assertResolutionSourceData,
+  hasValidDocumentResponse,
+  isNoDocumentInfoError,
+  notifyNoDocumentInfo
+} from '../utiles/documentos'
 
 
 
 const emit = defineEmits(['close'])
 
 async function exportar(formato) {
+  try {
+    if (!(await assertResolutionSourceData(props.tipo))) return
 
-  let base = 'resolucion/ppa'
+    let base = 'resolucion/ppa'
 
-  if (props.tipo === 'aa') {
-    base = 'resolucion/aa'
+    if (props.tipo === 'aa') {
+      base = 'resolucion/aa'
+    }
+
+    const url =
+      formato === 'pdf'
+        ? `/export/${base}/pdf`
+        : `/export/${base}/word`
+
+    const res = await api.get(url, {
+      responseType: 'blob',
+      params: withScopeParams()
+    })
+
+    if (!(await hasValidDocumentResponse(res))) {
+      notifyNoDocumentInfo()
+      return
+    }
+
+    const blob = new Blob([res.data])
+    const fileURL = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = fileURL
+
+    link.download =
+      formato === 'pdf'
+        ? `${props.tipo}_resolucion.pdf`
+        : `${props.tipo}_resolucion.docx`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(fileURL)
+
+    emit('close')
+  } catch (error) {
+    console.error('Error generando resolución', error.response || error)
+    if (isNoDocumentInfoError(error)) {
+      notifyNoDocumentInfo()
+      return
+    }
+
+    notifyNoDocumentInfo()
   }
-
-  const url =
-    formato === 'pdf'
-      ? `/export/${base}/pdf`
-      : `/export/${base}/word`
-
-  const res = await api.get(url, {
-    responseType: 'blob'
-  })
-
-  const blob = new Blob([res.data])
-  const fileURL = window.URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = fileURL
-
-  link.download =
-    formato === 'pdf'
-      ? `${props.tipo}_resolucion.pdf`
-      : `${props.tipo}_resolucion.docx`
-
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(fileURL)
-
-  emit('close')
 }
 const props = defineProps({
   show: Boolean,

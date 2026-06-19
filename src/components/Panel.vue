@@ -233,21 +233,14 @@
 
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import api from '../api/axios'
-import { computed } from 'vue'
+import { withScopeParams } from '../api/scope'
 import { filterByCurrentFaculty, filterPPAByCurrentDepartment, filterStudentItemsByCurrentDepartment, filterStudentItemsByCurrentFaculty } from '../utiles/facultadScope'
 import { isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
 const ppaList = ref([])
 const aaList = ref([])
-
-onMounted(() => {
-  loadPPA()
-
-  setInterval(() => {
-    loadPPA()
-  }, 3000) // cada 3 segundos
-})
+let refreshInterval = null
 
 const format = ref('pdf')
 const resolutionType = ref('ppa')
@@ -260,9 +253,6 @@ const showSuccessModal = ref(false)
 
 
 function confirmExport() {
-  console.log('Formato:', format.value)
-  console.log('Resolución:', resolutionType.value)
-
   showConfigModal.value = false
   showSuccessModal.value = true
 }
@@ -270,7 +260,9 @@ function confirmExport() {
 
 async function loadPPA() {
   try {
-    const response = await api.get('/ppa')
+    const response = await api.get('/ppa', {
+      params: withScopeParams()
+    })
     ppaList.value = isCurrentUserDepartmentHead()
       ? await filterPPAByCurrentDepartment(response.data)
       : await filterByCurrentFaculty(response.data)
@@ -295,19 +287,30 @@ onMounted(() => {
   loadPPA()
   loadAA()
 
-  setInterval(() => {
+  refreshInterval = setInterval(() => {
     loadPPA()
     loadAA()
   }, 3000)
 })
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+})
+
 async function loadAA() {
   try {
-    const res = await api.get('/alumno-ayudante/activos')
-    const filteredAA = await filterStudentItemsByCurrentFaculty(res.data)
+    const res = await api.get('/alumno-ayudante/activos', {
+      params: withScopeParams()
+    })
+    const filteredAA = isCurrentUserDepartmentHead()
+      ? await filterStudentItemsByCurrentDepartment(res.data)
+      : await filterStudentItemsByCurrentFaculty(res.data)
+
     aaList.value = deduplicateAA(
-      isCurrentUserDepartmentHead()
-        ? await filterStudentItemsByCurrentDepartment(res.data)
-        : filteredAA
+      filteredAA
     )
   } catch (error) {
     console.error(error)

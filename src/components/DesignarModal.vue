@@ -200,6 +200,7 @@ import { successAlert, errorAlert } from '../utiles/alerts'
 import { confirmAlert } from '../utiles/alerts'
 import ConfirmModal from './ConfirmModal.vue'
 import { nextTick } from 'vue'
+import { withScopeBody } from '../api/scope'
 const searchInput = ref(null)
 const search = ref('')
 const emit = defineEmits(['update:modelValue', 'ppa-creado'])
@@ -281,8 +282,6 @@ async function cargarDepartamentos() {
 
     const res = await api.get(`/facultad/${facultyId}/departamentos`)
 
-    console.log('DEPARTAMENTOS:', res.data) // 👈 DEBUG
-
     departamentos.value = res.data
   } catch (error) {
   console.error(error)
@@ -292,15 +291,20 @@ async function cargarDepartamentos() {
 
 async function cargarDepartamentoDelJefe() {
   const access = getCurrentUserAccess()
+  const facultyId = getCurrentUserFacultyId()
 
-  if (!access?.departmentId) {
+  if (!access?.departmentId || !facultyId) {
     errorAlert('No hay un departamento asociado al jefe de departamento actual')
     return
   }
 
+  const response = await api.get(`/facultad/${facultyId}/departamentos`)
+  const departments = Array.isArray(response.data) ? response.data : response.data?.data ?? []
+  const matchedDepartment = departments.find(dep => String(dep.id) === String(access.departmentId))
+
   const department = {
     id: access.departmentId,
-    nombre: access.departmentName,
+    nombre: matchedDepartment?.nombre ?? access.departmentName ?? 'Departamento actual',
   }
 
   await selectDepartamento(department)
@@ -323,8 +327,6 @@ async function cargarCarreras(idDepartamento) {
   try {
     const res = await api.get(`/departamento/${idDepartamento}/carreras`)
 
-    console.log('CARRERAS:', res.data) // 👈 DEBUG
-
     carreras.value = res.data
   } catch (error) {
   console.error(error)
@@ -346,8 +348,6 @@ async function cargarAnios(idProgForm) {
   try {
     const res = await api.get(`/programa/${idProgForm}/anios`)
 
-    console.log('AÑOS:', res.data) // 👈 DEBUG
-
     anios.value = res.data
   } catch (error) {
   console.error(error)
@@ -358,19 +358,7 @@ async function cargarAnios(idProgForm) {
 async function selectAnio(a) {
   try {
     anioSeleccionado.value = a
-
-    const cursoRes = await api.get(`/anio/${a.id}/curso`)
-
-    console.log('CURSO:', cursoRes.data) // 👈 DEBUG
-
-    const cursoId = cursoRes.data.id_curso
-
-    if (!cursoId) {
-      errorAlert('Ese año académico no tiene un curso asociado. No se puede completar la asignación PPA.')
-      return
-    }
-
-    await crearPPA(cursoId)
+    await crearPPA()
 
   } catch (error) {
     console.error('Error obteniendo año:', error)
@@ -381,12 +369,11 @@ async function selectAnio(a) {
 }
 
 
-async function crearPPA(idCurso) {
+async function crearPPA() {
   try {
    if (
   !profesorSeleccionado.value?.id ||
-  !anioSeleccionado.value?.id ||
-  !idCurso
+  !anioSeleccionado.value?.id
 ) {
   errorAlert('Faltan datos para completar la asignación')
   return
@@ -402,11 +389,10 @@ if (yaEsPPA) {
 
   if (!confirmar) return
 }
-    await api.post('/ppa/designar', {
+    await api.post('/ppa/designar', withScopeBody({
       id_profesor: profesorSeleccionado.value.id,
-      id_a_academico: anioSeleccionado.value.id,
-      id_curso: idCurso
-    })
+      id_a_academico: anioSeleccionado.value.id
+    }))
 
    successAlert(
   `Se asignó correctamente a ${profesorSeleccionado.value.nombre} 

@@ -205,6 +205,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import api from '../api/axios'
+import { withScopeParams } from '../api/scope'
 import { getUsers } from '../api/users'
 import { assignAccess, listFacultyAccess } from '../api/access'
 import {
@@ -253,11 +254,28 @@ async function reloadAll() {
   message.value = ''
 
   try {
+    await loadCurrentFaculty()
     await loadUsers()
     await loadDepartments()
     await Promise.all([loadAccessUsers(), loadLogs()])
   } finally {
     loading.value = false
+  }
+}
+
+async function loadCurrentFaculty() {
+  if (!currentFaculty.value?.facultyId || currentFaculty.value?.facultyName) return
+
+  const response = await api.get('/facultad')
+  const faculties = Array.isArray(response.data?.data) ? response.data.data : []
+  const faculty = faculties.find(item => String(item.id) === String(currentFaculty.value.facultyId))
+
+  if (faculty) {
+    currentFaculty.value = {
+      facultyId: faculty.id,
+      facultyName: faculty.nombre,
+      facultyAbbreviation: faculty.abreviatura,
+    }
   }
 }
 
@@ -282,7 +300,9 @@ async function loadDepartments() {
 }
 
 async function loadLogs() {
-  const response = await api.get('/logs')
+  const response = await api.get('/logs', {
+    params: withScopeParams()
+  })
   logs.value = Array.isArray(response.data) ? response.data : response.data?.data ?? []
 }
 

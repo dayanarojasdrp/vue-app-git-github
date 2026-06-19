@@ -196,6 +196,14 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import api from '../api/axios'
+import { getDocumentUrl } from '../api/files'
+import { withScopeBody, withScopeParams } from '../api/scope'
+import {
+  hasValidDocumentResponse,
+  isNoDocumentInfoError,
+  NO_DOCUMENT_INFO_MESSAGE,
+  notifyNoDocumentInfo
+} from '../utiles/documentos'
 import { filterDocumentsByCurrentFaculty } from '../utiles/facultadScope'
 
 // 🔥 estados
@@ -214,10 +222,10 @@ const errorMsg = ref('')
 async function cargarDocumentos() {
   try {
     const res = await api.get('/documentos', {
-      params: {
+      params: withScopeParams({
         tipo: filterType.value,
         periodo: filterPeriod.value
-      }
+      })
     })
 
     const filteredDocuments = filterDocumentsByCurrentFaculty(res.data)
@@ -228,6 +236,9 @@ async function cargarDocumentos() {
       type: doc.tipo,
       period: doc.periodo,
       ruta: doc.ruta,
+      url: doc.url,
+      download_url: doc.download_url,
+      ruta_url: doc.ruta_url,
       facultyId: doc.facultad_id ?? doc.id_facultad ?? doc.facultyId
     }))
 
@@ -256,7 +267,8 @@ async function cargarCursos() {
 
 // 🔥 descargar archivo
 function descargar(doc) {
-  const url = `http://localhost:8000/storage/${doc.ruta}`
+  const url = getDocumentUrl(doc)
+  if (!url) return
 
   const link = document.createElement('a')
   link.href = url
@@ -273,7 +285,6 @@ onMounted(() => {
   cargarCursos()
 })
 async function generarHistorial() {
-  console.log("CLICK")
 errorMsg.value = '' 
  if (!desde.value || !hasta.value) {
     errorMsg.value = "Selecciona un rango de años"
@@ -292,17 +303,18 @@ errorMsg.value = ''
       ? '/documentos/historial'
       : '/documentos/historial-aa'
 
-    const res = await api.post(url, {
+    const res = await api.post(url, withScopeBody({
       desde: desde.value,
       hasta: hasta.value
-    }, {
+    }), {
       responseType: 'blob'
     })
 
     
 
-    if (!res.data || res.data.size === 0) {
-      errorMsg.value = "No hay datos para ese rango"
+    if (!(await hasValidDocumentResponse(res))) {
+      errorMsg.value = NO_DOCUMENT_INFO_MESSAGE
+      notifyNoDocumentInfo()
       return
     }
 
@@ -319,6 +331,12 @@ errorMsg.value = ''
 
   } catch (error) {
     console.error("ERROR COMPLETO:", error)
+    if (isNoDocumentInfoError(error)) {
+      errorMsg.value = NO_DOCUMENT_INFO_MESSAGE
+      notifyNoDocumentInfo()
+      return
+    }
+
     errorMsg.value = "Error generando historial"
   }
 }

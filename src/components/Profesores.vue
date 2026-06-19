@@ -123,13 +123,31 @@
   @ppa-creado="loadPPA"
   :ppa-list="ppaList"
 />
- <p class="text-xs text-slate-400">
-          Lista de PPAs
-          </p>
+      <div class="flex items-center gap-5 mt-3 mb-2 border-b border-slate-100">
+        <button
+          class="pb-2 text-xs font-medium transition border-b-2"
+          :class="activePpaView === 'lista'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-slate-400 hover:text-slate-600'"
+          @click="activePpaView = 'lista'"
+        >
+          Lista
+        </button>
+
+        <button
+          class="pb-2 text-xs font-medium transition border-b-2"
+          :class="activePpaView === 'historial'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-slate-400 hover:text-slate-600'"
+          @click="activePpaView = 'historial'"
+        >
+          Historial
+        </button>
+      </div>
 
 
       <!-- 🔥 LISTA CON SCROLL (AQUÍ VA EL SCROLL BIEN HECHO) -->
-      <div class="flex-1 overflow-y-auto border rounded-xl p-2">
+      <div v-if="activePpaView === 'lista'" class="flex-1 overflow-y-auto border rounded-xl p-2">
 
         <p v-if="ppaList.length === 0" class="text-xs text-slate-400">
           No hay PPA vigentes
@@ -197,6 +215,54 @@
         </ul>
       </div>
 
+      <div v-else class="flex-1 overflow-y-auto border rounded-xl p-2 bg-slate-50">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-xs font-semibold text-slate-700">
+              PPA por cursos
+            </h2>
+            <p class="text-[11px] text-slate-400 leading-tight">
+              Historial de profesores activos agrupado por curso
+            </p>
+          </div>
+        </div>
+
+        <p v-if="ppaPorCurso.length === 0" class="text-xs text-slate-400">
+          No hay PPA asociados a cursos anteriores
+        </p>
+
+        <div v-else class="space-y-2 pr-1">
+          <section
+            v-for="grupo in ppaPorCurso"
+            :key="grupo.key"
+            class="bg-white border rounded-lg px-3 py-2"
+          >
+            <div class="flex items-center justify-between mb-1.5">
+              <h3 class="text-xs font-semibold text-slate-700">
+                Curso {{ grupo.curso }}
+              </h3>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                {{ grupo.items.length }} PPA
+              </span>
+            </div>
+
+            <ul class="space-y-1.5">
+              <li
+                v-for="ppa in grupo.items"
+                :key="getPPAHistoryKey(ppa)"
+                class="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-2.5 py-1.5"
+              >
+                <div>
+                  <p class="text-xs font-medium text-slate-700 leading-tight">
+                    {{ ppa.nombre }} {{ ppa.apellidos }}
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -230,22 +296,21 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api/axios'
-import { cursoSeleccionado, anioSeleccionado } from '../store/context'
+import { withScopeBody, withScopeParams } from '../api/scope'
 import DesignarModal from './DesignarModal.vue'
 import { computed } from 'vue'
-import HeaderBar from './HeaderBar.vue'
-import ExportModal from './ExportModal.vue'
 import ResolucionModal from './ResolucionModal.vue'
 import { filterByCurrentFaculty, filterPPAByCurrentDepartment, getCurrentDepartmentProfessors, getCurrentFacultyProfessors } from '../utiles/facultadScope'
 import { isCurrentUserDepartmentHead } from '../utiles/vicedecanos'
-const showExportModal = ref(false)
 
 const showResolucionModal = ref(false)
 const isDepartmentHead = isCurrentUserDepartmentHead()
 const searchPPA = ref('')
 const searchOpenPPA = ref(false)
+const activePpaView = ref('lista')
 const profesores = ref([])
 const ppaList = ref([])
+const ppaHistoryList = ref([])
 const showProfesores = ref(false)
 const showModal = ref(false)
 
@@ -257,8 +322,8 @@ async function loadProfesores() {
       : await getCurrentFacultyProfessors()
     showProfesores.value = true
   } catch (error) {
-    alert('Error cargando profesores')
     console.error(error)
+    showToast('Error cargando profesores', 'error')
   }
 }
 
@@ -270,17 +335,16 @@ async function confirmRatify(ppa) {
     `¿Desea ratificar a ${ppa.nombre}?`,
     async () => {
       try {
-        await api.post('/ppa/ratificar', {
+        await api.post('/ppa/ratificar', withScopeBody({
           id_profesor: ppa.id,
-          id_a_academico: ppa.id_a_academico,
-          id_curso: ppa.id_curso
-        })
+          id_a_academico: ppa.id_a_academico
+        }))
 
         showToast('PPA ratificado correctamente', 'success')
         await loadPPA()
 
       } catch (error) {
-        console.log(error.response)
+        console.error(error.response || error)
         showToast(
           error.response?.data?.message || 'Error al ratificar',
           'error'
@@ -296,17 +360,16 @@ async function confirmRemove(ppa) {
     `¿Eliminar a ${ppa.nombre} como PPA?`,
     async () => {
       try {
-        await api.post('/ppa/desnombrar', {
+        await api.post('/ppa/desnombrar', withScopeBody({
           id_profesor: ppa.id,
-          id_a_academico: ppa.id_a_academico,
-          id_curso: ppa.id_curso
-        })
+          id_a_academico: ppa.id_a_academico
+        }))
 
         showToast('PPA eliminado correctamente', 'warning')
         await loadPPA()
 
       } catch (error) {
-        console.log(error.response)
+        console.error(error.response || error)
         showToast(
           error.response?.data?.message || 'Error al eliminar',
           'error'
@@ -320,14 +383,43 @@ async function confirmRemove(ppa) {
 
 async function loadPPA() {
   try {
-    const response = await api.get('/ppa')
+    const response = await api.get('/ppa', {
+      params: withScopeParams()
+    })
+    const data = Array.isArray(response.data) ? response.data : response.data?.data ?? []
     ppaList.value = isCurrentUserDepartmentHead()
-      ? await filterPPAByCurrentDepartment(response.data)
-      : await filterByCurrentFaculty(response.data)
+      ? await filterPPAByCurrentDepartment(data)
+      : await filterByCurrentFaculty(data)
+
+    await loadPPAHistory()
   } catch (error) {
     console.error(error)
-    alert('Error cargando PPA')
+    showToast('Error cargando PPA', 'error')
   }
+}
+
+async function loadPPAHistory() {
+  const urls = ['/ppa/historial', '/ppa/historico', '/ppa/todos', '/ppa/all']
+
+  for (const url of urls) {
+    try {
+      const response = await api.get(url, {
+        params: withScopeParams()
+      })
+      const data = Array.isArray(response.data) ? response.data : response.data?.data ?? []
+      ppaHistoryList.value = isCurrentUserDepartmentHead()
+        ? await filterPPAByCurrentDepartment(data)
+        : await filterByCurrentFaculty(data)
+      return
+    } catch (error) {
+      if (![404, 405].includes(error.response?.status)) {
+        console.warn('No se pudo cargar historial PPA', error.response || error)
+        break
+      }
+    }
+  }
+
+  ppaHistoryList.value = ppaList.value
 }
 
 onMounted(() => {
@@ -371,10 +463,6 @@ async function handleConfirm() {
 
   confirmModal.value.show = false
 }
-function asignar(profesor) {
-  profesorSeleccionado.value = profesor
-  showModal.value = true
-}
 function normalizarTexto(texto) {
   return texto
     .toLowerCase()
@@ -393,6 +481,52 @@ const ppaFiltrados = computed(() => {
     return nombre.includes(busqueda)
   })
 })
+
+function getCursoLabel(item) {
+  return item?.curso || item?.curso_nombre || item?.periodo || 'Sin curso'
+}
+
+function getCursoOrder(item) {
+  const curso = getCursoLabel(item)
+  const match = String(curso).match(/\d{4}/)
+  return match ? Number(match[0]) : Number(item?.id_curso || 0)
+}
+
+function getPPAHistoryKey(ppa) {
+  return [
+    ppa.id,
+    ppa.id_profesor,
+    ppa.id_curso,
+    getCursoLabel(ppa),
+    ppa.id_a_academico,
+    ppa.accion || ppa.estado || ''
+  ].join('-')
+}
+
+const ppaPorCurso = computed(() => {
+  const grupos = new Map()
+
+  ppaHistoryList.value.forEach(ppa => {
+    if (!ppa.id_curso && !ppa.curso && !ppa.curso_nombre && !ppa.periodo) return
+
+    const curso = getCursoLabel(ppa)
+    const key = String(ppa.id_curso ?? curso)
+
+    if (!grupos.has(key)) {
+      grupos.set(key, {
+        key,
+        curso,
+        order: getCursoOrder(ppa),
+        items: []
+      })
+    }
+
+    grupos.get(key).items.push(ppa)
+  })
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.order - a.order || String(b.curso).localeCompare(String(a.curso)))
+})
 function toggleSearchPPA() {
   searchOpenPPA.value = !searchOpenPPA.value
 
@@ -404,11 +538,6 @@ function toggleSearchPPA() {
     searchPPA.value = ''
   }
 }
-function exportarProfesores() {
-  console.log('FUNCION PADRE EJECUTADA')
-  showExportModal.value = true
-}
-
 </script>
 
 <style scoped>

@@ -1,5 +1,12 @@
 import { getUser } from './auth'
 
+const ROLE_LABELS = {
+  admin: 'Administrador',
+  vicedecano_docente: 'Vicedecano docente',
+  decano: 'Decano',
+  jefe_departamento: 'Jefe de departamento',
+}
+
 export function canAccessApp(username) {
   const user = getUser()
   return Boolean(
@@ -14,8 +21,8 @@ export function getCurrentUserFaculty() {
 
   return {
     facultyId: user.facultyId,
-    facultyName: user.facultyName,
-    facultyAbbreviation: user.facultyAbbreviation,
+    facultyName: user.facultyName ?? null,
+    facultyAbbreviation: user.facultyAbbreviation ?? null,
   }
 }
 
@@ -30,12 +37,12 @@ export function getCurrentUserAccess() {
   return {
     username: user.username,
     role: user.role,
-    roleLabel: user.roleLabel,
+    roleLabel: user.roleLabel ?? ROLE_LABELS[user.role] ?? user.role,
     facultyId: user.facultyId,
-    facultyName: user.facultyName,
-    facultyAbbreviation: user.facultyAbbreviation,
+    facultyName: user.facultyName ?? null,
+    facultyAbbreviation: user.facultyAbbreviation ?? null,
     departmentId: user.departmentId,
-    departmentName: user.departmentName,
+    departmentName: user.departmentName ?? null,
     allAccess: user.access ?? [],
   }
 }

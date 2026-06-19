@@ -88,7 +88,27 @@ Create a `.env` file in the project root:
 
 ```env
 VITE_API_URL=http://localhost:8000/api
+VITE_USERS_API_URL=http://127.0.0.1:8001/api
+VITE_STORAGE_URL=http://localhost:8000
 ```
+
+`VITE_STORAGE_URL` is used only when document records do not already include a
+download URL from the backend.
+
+The frontend sends the current user scope in these headers when available:
+
+```text
+X-User
+X-Facultad
+X-Departamento
+X-Curso
+X-Anio
+```
+
+The backend must treat those values as context to validate, not as trust by
+itself. Endpoints that return or generate PPA, AA, students, professors,
+documents, logs, and resolutions should enforce the allowed faculty and
+department server-side.
 
 ## Thesis Purpose
 
@@ -106,5 +126,4 @@ The purpose of this system is to centralize information, reduce manual work, imp
 ## Author
 
 Developed by Dayana Rojas
-
 

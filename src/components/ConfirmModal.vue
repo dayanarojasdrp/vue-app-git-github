@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50">
+  <div v-if="show" class="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-[20000]">
 
     <div class="bg-white w-[350px] rounded-2xl p-5 shadow-2xl border border-slate-200">
 
